@@ -10,12 +10,16 @@ import type {
 
 /**
  * Base URL of the Nobug Labs ERP.
- * In production this is injected via VITE_ERP_BASE_URL (AI Studio / Cloud Run secrets).
- * Falls back to the documented dev server when not set.
+ *
+ * - Local development: points directly at the ERP (browser → ERP).
+ * - Production (Vercel): the app is served over HTTPS and calls the ERP through a
+ *   serverless proxy (`api/[...path].js`) on the same origin to avoid mixed-content
+ *   blocking and CORS issues. Set VITE_ERP_BASE_URL to override in either case.
  */
-export const ERP_BASE_URL = (
-  import.meta.env.VITE_ERP_BASE_URL || 'http://3.92.235.72'
-).replace(/\/+$/, '');
+const CONFIGURED_ERP_URL = (import.meta.env.VITE_ERP_BASE_URL || '').replace(/\/+$/, '');
+
+export const ERP_BASE_URL = CONFIGURED_ERP_URL || (import.meta.env.PROD ? '' : 'http://3.92.235.72');
+export const ERP_VIA_PROXY = !CONFIGURED_ERP_URL && import.meta.env.PROD;
 
 const TOKEN_KEY = 'ps_faturas_erp_token';
 const USER_KEY = 'ps_faturas_erp_user';

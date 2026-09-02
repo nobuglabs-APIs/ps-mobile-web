@@ -66,8 +66,8 @@ export const InvoiceA4View: React.FC<InvoiceA4ViewProps> = ({
           invoiceFileName(getDocumentTypeName(invoice.docType), invoice.number)
         );
       }
-    } catch (error) {
-      console.error('Falha ao gerar PDF', error);
+    } catch (error: any) {
+      console.error('Falha ao gerar PDF', error?.message || error);
     } finally {
       setGeneratingPdf(false);
     }
