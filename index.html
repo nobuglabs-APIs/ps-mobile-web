@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="pt">
+  <head>
+    <meta charset="UTF-8" />
+    <script>
+      (function() {
+        try {
+          var _rawFetch = window.fetch;
+          var _activeFetch = _rawFetch ? _rawFetch.bind(window) : undefined;
+          
+          function getFetch() {
+            return _activeFetch;
+          }
+          function setFetch(val) {
+            _activeFetch = val;
+          }
+
+          try {
+            Object.defineProperty(window, 'fetch', {
+              get: getFetch,
+              set: setFetch,
+              configurable: true,
+              enumerable: true
+            });
+          } catch (errWindow) {
+            try {
+              var proto = Object.getPrototypeOf(window) || Window.prototype;
+              Object.defineProperty(proto, 'fetch', {
+                get: getFetch,
+                set: setFetch,
+                configurable: true,
+                enumerable: true
+              });
+            } catch (errProto) {}
+          }
+
+          window.addEventListener('error', function(e) {
+            if (e && e.message && e.message.indexOf('fetch') !== -1 && e.message.indexOf('getter') !== -1) {
+              if (e.preventDefault) e.preventDefault();
+              if (e.stopImmediatePropagation) e.stopImmediatePropagation();
+              return true;
+            }
+          }, true);
+        } catch (globalErr) {}
+      })();
+    </script>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>PS Faturas — PS Comércio & Prestação de Serviços</title>
+    <meta name="description" content="Sistema profissional, moderno e completo de gestão e emissão de faturas da PS Comércio & Prestação de Serviços." />
+    <meta property="og:title" content="PS Faturas — PS Comércio & Prestação de Serviços" />
+    <meta property="og:description" content="Sistema profissional, moderno e completo de gestão e emissão de faturas da PS Comércio & Prestação de Serviços." />
+    <meta property="og:type" content="website" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;0,9..40,800;1,9..40,400&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  </head>
+  <body class="bg-[#f4f7fb] text-slate-800 antialiased font-['DM_Sans',sans-serif]">
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>
+
