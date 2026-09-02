@@ -22,10 +22,13 @@ import {
   Coins,
   CreditCard,
   PenTool,
+  Loader2,
 } from 'lucide-react';
 import { Invoice, CompanyInfo, DocumentType } from '../types';
-import { PSLogo } from './PSLogo';
 import { formatKz, formatKzDecimal, numberToKzWords } from '../utils/formatters';
+import { downloadInvoicePdf, invoiceFileName } from '../utils/pdfExport';
+
+const LOGO_SRC = (import.meta.env.VITE_LOGO_URL as string) || '/IMG/logo.png';
 
 interface InvoiceA4ViewProps {
   invoice: Invoice;
@@ -46,9 +49,28 @@ export const InvoiceA4View: React.FC<InvoiceA4ViewProps> = ({
 }) => {
   const [copiedShare, setCopiedShare] = useState(false);
   const [showShareModal, setShowShareModal] = useState(false);
+  const [generatingPdf, setGeneratingPdf] = useState(false);
 
   const handlePrint = () => {
     window.print();
+  };
+
+  const handleDownloadPdf = async () => {
+    if (generatingPdf) return;
+    setGeneratingPdf(true);
+    try {
+      const el = document.getElementById('printable-invoice');
+      if (el) {
+        await downloadInvoicePdf(
+          el,
+          invoiceFileName(getDocumentTypeName(invoice.docType), invoice.number)
+        );
+      }
+    } catch (error) {
+      console.error('Falha ao gerar PDF', error);
+    } finally {
+      setGeneratingPdf(false);
+    }
   };
 
   const handleCopyLink = () => {
@@ -212,12 +234,22 @@ export const InvoiceA4View: React.FC<InvoiceA4ViewProps> = ({
           </button>
 
           <button
-            onClick={handlePrint}
-            className="inline-flex items-center gap-1.5 bg-[#0056d6] hover:bg-[#0047b3] text-white px-4 py-2 rounded-xl text-xs font-bold shadow-xs hover:shadow transition-all cursor-pointer"
-            title="Exportar ou Imprimir em formato PDF"
+            onClick={handleDownloadPdf}
+            disabled={generatingPdf}
+            className="inline-flex items-center gap-1.5 bg-[#0056d6] hover:bg-[#0047b3] text-white px-4 py-2 rounded-xl text-xs font-bold shadow-xs hover:shadow transition-all cursor-pointer disabled:opacity-60 disabled:cursor-wait"
+            title="Descarregar o documento em PDF"
           >
-            <FileDown className="w-4 h-4" />
-            <span>Gerar PDF</span>
+            {generatingPdf ? (
+              <>
+                <Loader2 className="w-4 h-4 animate-spin" />
+                <span>A gerar…</span>
+              </>
+            ) : (
+              <>
+                <FileDown className="w-4 h-4" />
+                <span>Gerar PDF</span>
+              </>
+            )}
           </button>
 
           <button
@@ -234,7 +266,7 @@ export const InvoiceA4View: React.FC<InvoiceA4ViewProps> = ({
       <div className="flex justify-center">
         <div
           id="printable-invoice"
-          className="print-container w-full max-w-[850px] bg-white rounded-2xl sm:rounded-3xl shadow-md border border-slate-200/90 text-slate-800 print:shadow-none print:border-none print:p-0 print:m-0 overflow-hidden"
+          className="print-container w-[794px] max-w-full bg-white rounded-2xl sm:rounded-3xl shadow-md border border-slate-200/90 text-slate-800 print:shadow-none print:border-none print:p-0 print:m-0 overflow-hidden"
         >
           {/* Top Padding */}
           <div className="p-8 sm:p-12 space-y-6">
@@ -242,7 +274,11 @@ export const InvoiceA4View: React.FC<InvoiceA4ViewProps> = ({
             <div className="flex flex-col sm:flex-row justify-between items-start gap-4 pb-4">
               {/* Logótipo & Marca */}
               <div className="flex items-center gap-3.5">
-                <PSLogo variant="icon" size="lg" />
+                <img
+                  src={companyInfo.logoUrl || LOGO_SRC}
+                  alt="PS – Comércio e Prestação de Serviços"
+                  className="w-20 h-20 sm:w-24 sm:h-24 object-contain"
+                />
                 <div className="space-y-0.5">
                   <h1 className="text-xl sm:text-2xl font-black text-[#0a1e42] tracking-tight leading-none uppercase">
                     PS – COMÉRCIO E PRESTAÇÃO DE SERVIÇOS
@@ -923,46 +959,57 @@ export const InvoiceA4View: React.FC<InvoiceA4ViewProps> = ({
             )}
           </div>
 
-          {/* 10. RODAPÉ OFICIAL: BANNER AZUL ESCURO (#0a1e42) COM FAIXA DOURADA CURVADA */}
-          <div className="relative bg-[#0a1e42] text-white pt-5 pb-5 px-6 sm:px-10 mt-6">
-            {/* Linha de acento dourada curvada no topo do rodapé */}
-            <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-[#d49419] via-[#f59e0b] to-[#d49419]" />
+          {/* 10. RODAPÉ OFICIAL: BANNER AZUL ESCURO (#0a1e42) COM FAIXA CURVA DOURADA E BRANCA */}
+          <div className="relative bg-[#0a1e42] text-white mt-6 overflow-hidden">
+            {/* Faixas curvas decorativas (dourada + branca) a subir para o lado direito */}
+            <svg
+              className="absolute -top-1 left-0 w-full h-8"
+              viewBox="0 0 850 32"
+              preserveAspectRatio="none"
+              aria-hidden="true"
+            >
+              <path
+                d="M0,20 C 160,32 320,26 470,16 C 600,8 700,4 850,2 L850,0 L0,0 Z"
+                fill="#d49419"
+              />
+              <path
+                d="M0,26 C 180,36 360,30 520,22 C 640,16 740,10 850,9 L850,0 L0,0 Z"
+                fill="#ffffff"
+              />
+            </svg>
 
-            <div className="flex flex-col sm:flex-row items-center justify-between gap-4 text-[11px] sm:text-xs">
-              {/* Localização */}
-              <div className="flex items-center gap-2 text-slate-200">
-                <div className="w-6 h-6 rounded-full bg-white/10 flex items-center justify-center shrink-0">
-                  <MapPin className="w-3.5 h-3.5 text-amber-400" />
+            <div className="pt-10 pb-6 px-6 sm:px-10">
+              <div className="flex flex-col sm:flex-row items-center justify-between gap-4 text-[11px] sm:text-xs">
+                {/* Localização */}
+                <div className="flex items-center gap-2 text-slate-100 flex-1 justify-center">
+                  <MapPin className="w-4 h-4 text-amber-400 shrink-0" />
+                  <span>
+                    {companyInfo.address || 'Periferia do Projecto Nova Vida'},{' '}
+                    {companyInfo.city || 'Luanda – Angola'}
+                  </span>
                 </div>
-                <span>
-                  {companyInfo.address || 'Periferia do Projecto Nova Vida'}, {companyInfo.city || 'Luanda – Angola'}
-                </span>
-              </div>
 
-              {/* Divisor */}
-              <div className="h-4 w-px bg-white/20 hidden sm:block" />
+                {/* Divisor dourado */}
+                <div className="w-px self-stretch my-1 bg-[#d49419]/70 hidden sm:block" />
 
-              {/* WhatsApp */}
-              <div className="flex items-center gap-2 text-slate-200">
-                <div className="w-6 h-6 rounded-full bg-emerald-500/20 flex items-center justify-center shrink-0">
-                  <Phone className="w-3.5 h-3.5 text-emerald-400" />
+                {/* WhatsApp */}
+                <div className="flex items-center gap-2 text-slate-100 flex-1 justify-center">
+                  <Phone className="w-4 h-4 text-amber-400 shrink-0" />
+                  <span className="font-mono font-medium">
+                    {companyInfo.phone || '931 032 313'} <span className="text-slate-300">(WhatsApp)</span>
+                  </span>
                 </div>
-                <span className="font-mono font-medium">
-                  {companyInfo.phone || '931 032 313'} (WhatsApp)
-                </span>
-              </div>
 
-              {/* Divisor */}
-              <div className="h-4 w-px bg-white/20 hidden sm:block" />
+                {/* Divisor dourado */}
+                <div className="w-px self-stretch my-1 bg-[#d49419]/70 hidden sm:block" />
 
-              {/* Email */}
-              <div className="flex items-center gap-2 text-slate-200">
-                <div className="w-6 h-6 rounded-full bg-white/10 flex items-center justify-center shrink-0">
-                  <Mail className="w-3.5 h-3.5 text-amber-400" />
+                {/* Email */}
+                <div className="flex items-center gap-2 text-slate-100 flex-1 justify-center">
+                  <Mail className="w-4 h-4 text-amber-400 shrink-0" />
+                  <span className="font-medium">
+                    {companyInfo.email || 'segundapatricia065@gmail.com'}
+                  </span>
                 </div>
-                <span className="font-medium">
-                  {companyInfo.email || 'segundapatricia065@gmail.com'}
-                </span>
               </div>
             </div>
           </div>

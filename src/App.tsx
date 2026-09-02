@@ -3,12 +3,9 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
-  initialInvoices,
   initialCompanyInfo,
-  initialClients,
-  initialProducts,
 } from './data/initialData';
 import {
   Invoice,
@@ -31,99 +28,105 @@ import { ClientsView } from './components/ClientsView';
 import { ProductsServicesView } from './components/ProductsServicesView';
 import { SettingsView } from './components/SettingsView';
 import { getTodayFormatted, getDueDateFormatted } from './utils/formatters';
+import {
+  isAuthenticated as hasAuthToken,
+  clearAuth,
+  getUser,
+  listClients,
+  createClient,
+  updateClient,
+  deactivateClient,
+  listProducts,
+  createProduct,
+  updateProduct,
+  deactivateProduct,
+  listSales,
+  createSale,
+  issueSale,
+  paySale,
+  cancelSale,
+  mapCompanyFromUser,
+  mapErpSale,
+  toAppDate,
+} from './lib/api';
+import type { ErpSale, ErpClient } from './lib/api';
 
-const STORAGE_KEY_INVOICES = 'ps_faturas_invoices_v3';
 const STORAGE_KEY_COMPANY = 'ps_faturas_company_v3';
-const STORAGE_KEY_CLIENTS = 'ps_faturas_clients_v3';
-const STORAGE_KEY_PRODUCTS = 'ps_faturas_products_v3';
+
+function attachClientInfo(sales: ErpSale[], clients: Client[]): Invoice[] {
+  const byId = new Map(clients.map((c) => [c.id, c]));
+  return sales.map((s) => {
+    const inv = mapErpSale(s);
+    const client = s.client_id ? byId.get(s.client_id) : undefined;
+    if (client) {
+      inv.clientName = client.name;
+      inv.clientNif = client.nif || '';
+      inv.clientEmail = client.email || '';
+      inv.clientPhone = client.phone || '';
+      inv.clientAddress = client.address ? `${client.address}, ${client.city}` : '';
+    } else {
+      inv.clientName = 'Cliente Não Identificado';
+    }
+    inv.date = toAppDate(inv.date);
+    inv.dueDate = toAppDate(inv.dueDate);
+    inv.validityDate = toAppDate(inv.dueDate);
+    return inv;
+  });
+}
 
 export default function App() {
-  // 1. Estado de autenticação (quando deslogado, tela de login limpa e moderna)
-  const [isAuthenticated, setIsAuthenticated] = useState(true);
+  // 1. Estado de autenticação a partir do token guardado no ERP
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(() => hasAuthToken());
+  const [loadingData, setLoadingData] = useState(false);
 
   // 2. Estado do Menu Mobile
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
-  // 3. Faturas com LocalStorage
-  const [invoices, setInvoices] = useState<Invoice[]>(() => {
-    try {
-      const stored = localStorage.getItem(STORAGE_KEY_INVOICES);
-      if (stored) {
-        const parsed = JSON.parse(stored);
-        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
-      }
-    } catch {
-      // fallback
-    }
-    return initialInvoices;
-  });
+  // 3. Faturas vindas do ERP (/api/v1/sales)
+  const [invoices, setInvoices] = useState<Invoice[]>([]);
 
-  // 4. Clientes com LocalStorage
-  const [clients, setClients] = useState<Client[]>(() => {
-    try {
-      const stored = localStorage.getItem(STORAGE_KEY_CLIENTS);
-      if (stored) {
-        const parsed = JSON.parse(stored);
-        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
-      }
-    } catch {
-      // fallback
-    }
-    return initialClients;
-  });
+  // 4. Clientes vindos do ERP (/api/v1/clients)
+  const [clients, setClients] = useState<Client[]>([]);
 
-  // 5. Produtos / Serviços com LocalStorage
-  const [products, setProducts] = useState<ProductService[]>(() => {
-    try {
-      const stored = localStorage.getItem(STORAGE_KEY_PRODUCTS);
-      if (stored) {
-        const parsed = JSON.parse(stored);
-        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
-      }
-    } catch {
-      // fallback
-    }
-    return initialProducts;
-  });
+  // 5. Produtos / Serviços vindos do ERP (/api/v1/products)
+  const [products, setProducts] = useState<ProductService[]>([]);
 
-  // 6. Dados da Empresa com LocalStorage
+  // 6. Dados da Empresa (base local + dados do utilizador autenticado)
   const [companyInfo, setCompanyInfo] = useState<CompanyInfo>(() => {
     try {
       const stored = localStorage.getItem(STORAGE_KEY_COMPANY);
-      if (stored) {
-        return JSON.parse(stored);
-      }
+      if (stored) return JSON.parse(stored);
     } catch {
-      // fallback
+      // ignore
     }
     return initialCompanyInfo;
   });
 
-  // Persistência local automática
-  useEffect(() => {
+  // Carregar todos os dados do ERP após autenticação
+  const loadAll = useCallback(async () => {
+    setLoadingData(true);
     try {
-      localStorage.setItem(STORAGE_KEY_INVOICES, JSON.stringify(invoices));
-    } catch {
-      // ignore
+      const user = getUser();
+      const [cl, pr, sl] = await Promise.all([listClients(), listProducts(), listSales()]);
+      setClients(cl);
+      setProducts(pr);
+      setInvoices(attachClientInfo(sl, cl));
+      setCompanyInfo((prev) => mapCompanyFromUser(user, prev));
+    } catch (err) {
+      console.error('Falha ao carregar dados do ERP', err);
+    } finally {
+      setLoadingData(false);
     }
-  }, [invoices]);
+  }, []);
 
+  // Carregar dados assim que autenticado
   useEffect(() => {
-    try {
-      localStorage.setItem(STORAGE_KEY_CLIENTS, JSON.stringify(clients));
-    } catch {
-      // ignore
+    if (isAuthenticated) {
+      loadAll();
     }
-  }, [clients]);
+  }, [isAuthenticated, loadAll]);
 
-  useEffect(() => {
-    try {
-      localStorage.setItem(STORAGE_KEY_PRODUCTS, JSON.stringify(products));
-    } catch {
-      // ignore
-    }
-  }, [products]);
-
+  // Persistência local da config da empresa
   useEffect(() => {
     try {
       localStorage.setItem(STORAGE_KEY_COMPANY, JSON.stringify(companyInfo));
@@ -132,7 +135,7 @@ export default function App() {
     }
   }, [companyInfo]);
 
-  // 7. Navegação Principal
+  // 8. Navegação Principal
   const [activeTab, setActiveTab] = useState<ActiveTab>('dashboard');
 
   // 8. Documento em visualização A4
@@ -203,72 +206,72 @@ export default function App() {
     setActiveTab('nova-fatura');
   };
 
-  // AÇÕES DE FATURAS
-  const handleGenerateInvoice = (newOrUpdatedInvoice: Invoice) => {
-    setInvoices((prev) => {
-      const exists = prev.some((inv) => inv.id === newOrUpdatedInvoice.id);
-      if (exists) {
-        return prev.map((inv) =>
-          inv.id === newOrUpdatedInvoice.id ? newOrUpdatedInvoice : inv
-        );
-      }
-      return [newOrUpdatedInvoice, ...prev];
+  // Garante que o cliente existe no ERP e devolve o seu id
+  const resolveClientId = async (inv: Invoice): Promise<{ id: string | null; created?: Client }> => {
+    if (!inv.clientName || !inv.clientName.trim()) return { id: null };
+    const existing = clients.find(
+      (c) => c.name.trim().toLowerCase() === inv.clientName.trim().toLowerCase()
+    );
+    if (existing) return { id: existing.id };
+    const created = await createClient({
+      name: inv.clientName,
+      nif: inv.clientNif,
+      email: inv.clientEmail,
+      phone: inv.clientPhone,
+      address: inv.clientAddress,
+      city: 'Luanda',
     });
-
-    // Se o cliente não existir no cadastro, adicioná-lo automaticamente
-    if (newOrUpdatedInvoice.clientName) {
-      setClients((prev) => {
-        const existing = prev.find(
-          (c) =>
-            c.name.trim().toLowerCase() === newOrUpdatedInvoice.clientName.trim().toLowerCase()
-        );
-        if (!existing) {
-          const newC: Client = {
-            id: `c-${Date.now()}`,
-            name: newOrUpdatedInvoice.clientName,
-            nif: newOrUpdatedInvoice.clientNif || '',
-            email: newOrUpdatedInvoice.clientEmail || '',
-            phone: newOrUpdatedInvoice.clientPhone || '',
-            address: newOrUpdatedInvoice.clientAddress || '',
-            city: 'Luanda',
-            invoicesCount: 1,
-            totalInvoiced: newOrUpdatedInvoice.total,
-          };
-          return [...prev, newC];
-        } else {
-          return prev.map((c) =>
-            c.id === existing.id
-              ? {
-                  ...c,
-                  invoicesCount: (c.invoicesCount || 0) + 1,
-                  totalInvoiced: (c.totalInvoiced || 0) + newOrUpdatedInvoice.total,
-                }
-              : c
-          );
-        }
-      });
-    }
-
-    setEditingInvoice(null);
-    setSelectedInvoiceForA4(null);
-    setSuccessInvoice(newOrUpdatedInvoice);
+    setClients((prev) => [...prev, created]);
+    return { id: created.id, created };
   };
 
-  const handleSaveDraft = (draftInvoice: Invoice) => {
-    setInvoices((prev) => {
-      const exists = prev.some((inv) => inv.id === draftInvoice.id);
-      if (exists) {
-        return prev.map((inv) =>
-          inv.id === draftInvoice.id ? draftInvoice : inv
-        );
-      }
-      return [draftInvoice, ...prev];
-    });
+  // Persiste a fatura no ERP e atualiza o estado local
+  const persistSale = async (invoice: Invoice, emit: boolean): Promise<Invoice | null> => {
+    const { id: clientId, created } = await resolveClientId(invoice);
+    const createdSale = await createSale(invoice, clientId);
+    const final = emit ? await issueSale(createdSale.id) : createdSale;
+    const clientsForMapping = created ? [...clients, created] : clients;
+    const refreshed = attachClientInfo([final], clientsForMapping);
+    return refreshed[0] || null;
+  };
 
-    setEditingInvoice(null);
-    setSelectedInvoiceForA4(null);
-    setSuccessInvoice(null);
-    setActiveTab('faturas');
+  // AÇÕES DE FATURAS
+  const handleGenerateInvoice = async (newOrUpdatedInvoice: Invoice) => {
+    try {
+      const saved = await persistSale(newOrUpdatedInvoice, true);
+      if (saved) {
+        setInvoices((prev) => {
+          const exists = prev.some((inv) => inv.id === saved.id);
+          if (exists) return prev.map((inv) => (inv.id === saved.id ? saved : inv));
+          return [saved, ...prev];
+        });
+        setEditingInvoice(null);
+        setSelectedInvoiceForA4(null);
+        setSuccessInvoice(saved);
+        return;
+      }
+    } catch (err: any) {
+      alert(`Não foi possível emitir o documento no ERP: ${err?.message || 'erro desconhecido'}`);
+    }
+  };
+
+  const handleSaveDraft = async (draftInvoice: Invoice) => {
+    try {
+      const saved = await persistSale(draftInvoice, false);
+      if (saved) {
+        setInvoices((prev) => {
+          const exists = prev.some((inv) => inv.id === saved.id);
+          if (exists) return prev.map((inv) => (inv.id === saved.id ? saved : inv));
+          return [saved, ...prev];
+        });
+      }
+      setEditingInvoice(null);
+      setSelectedInvoiceForA4(null);
+      setSuccessInvoice(null);
+      setActiveTab('faturas');
+    } catch (err: any) {
+      alert(`Não foi possível guardar o documento no ERP: ${err?.message || 'erro desconhecido'}`);
+    }
   };
 
   const handlePreviewInvoice = (invoice: Invoice) => {
@@ -287,7 +290,12 @@ export default function App() {
     setActiveTab('nova-fatura');
   };
 
-  const handleDeleteInvoice = (invoiceId: string) => {
+  const handleDeleteInvoice = async (invoiceId: string) => {
+    try {
+      await cancelSale(invoiceId, 'Anulado a partir do PS Faturas');
+    } catch {
+      /* mantém o registo no ERP (trilha de auditoria) */
+    }
     setInvoices((prev) => prev.filter((i) => i.id !== invoiceId));
     if (selectedInvoiceForA4 && selectedInvoiceForA4.id === invoiceId) {
       setSelectedInvoiceForA4(null);
@@ -314,7 +322,18 @@ export default function App() {
     setActiveTab('nova-fatura');
   };
 
-  const handleToggleStatus = (invoiceId: string, newStatus: InvoiceStatus) => {
+  const handleToggleStatus = async (invoiceId: string, newStatus: InvoiceStatus) => {
+    // Quando marcada como paga, regista o pagamento no ERP
+    if (newStatus === 'Paga') {
+      const inv = invoices.find((i) => i.id === invoiceId);
+      if (inv && inv.id) {
+        try {
+          await paySale(inv.id, inv.total || 0, 'TRANSFERENCIA');
+        } catch {
+          /* continua localmente se o pagamento falhar */
+        }
+      }
+    }
     setInvoices((prev) =>
       prev.map((inv) => (inv.id === invoiceId ? { ...inv, status: newStatus } : inv))
     );
@@ -324,17 +343,30 @@ export default function App() {
   };
 
   // CLIENTES
-  const handleAddClient = (client: Client) => {
-    setClients((prev) => [...prev, client]);
+  const handleAddClient = async (client: Client) => {
+    try {
+      const created = await createClient(client);
+      setClients((prev) => [...prev, created]);
+    } catch (err: any) {
+      alert(`Não foi possível criar o cliente no ERP: ${err?.message || 'erro desconhecido'}`);
+    }
   };
 
-  const handleUpdateClient = (updatedClient: Client) => {
-    setClients((prev) =>
-      prev.map((c) => (c.id === updatedClient.id ? updatedClient : c))
-    );
+  const handleUpdateClient = async (updatedClient: Client) => {
+    try {
+      const updated = await updateClient(updatedClient.id, updatedClient);
+      setClients((prev) => prev.map((c) => (c.id === updated.id ? updated : c)));
+    } catch (err: any) {
+      alert(`Não foi possível atualizar o cliente no ERP: ${err?.message || 'erro desconhecido'}`);
+    }
   };
 
-  const handleDeleteClient = (clientId: string) => {
+  const handleDeleteClient = async (clientId: string) => {
+    try {
+      await deactivateClient(clientId);
+    } catch {
+      /* remove localmente na mesma */
+    }
     setClients((prev) => prev.filter((c) => c.id !== clientId));
   };
 
@@ -345,17 +377,30 @@ export default function App() {
   };
 
   // PRODUTOS
-  const handleAddProduct = (product: ProductService) => {
-    setProducts((prev) => [...prev, product]);
+  const handleAddProduct = async (product: ProductService) => {
+    try {
+      const created = await createProduct(product);
+      setProducts((prev) => [...prev, created]);
+    } catch (err: any) {
+      alert(`Não foi possível criar o produto no ERP: ${err?.message || 'erro desconhecido'}`);
+    }
   };
 
-  const handleUpdateProduct = (updatedProduct: ProductService) => {
-    setProducts((prev) =>
-      prev.map((p) => (p.id === updatedProduct.id ? updatedProduct : p))
-    );
+  const handleUpdateProduct = async (updatedProduct: ProductService) => {
+    try {
+      const updated = await updateProduct(updatedProduct.id, updatedProduct);
+      setProducts((prev) => prev.map((p) => (p.id === updated.id ? updated : p)));
+    } catch (err: any) {
+      alert(`Não foi possível atualizar o produto no ERP: ${err?.message || 'erro desconhecido'}`);
+    }
   };
 
-  const handleDeleteProduct = (productId: string) => {
+  const handleDeleteProduct = async (productId: string) => {
+    try {
+      await deactivateProduct(productId);
+    } catch {
+      /* remove localmente na mesma */
+    }
     setProducts((prev) => prev.filter((p) => p.id !== productId));
   };
 
@@ -366,6 +411,10 @@ export default function App() {
 
   // LOGOUT
   const handleLogout = () => {
+    clearAuth();
+    setInvoices([]);
+    setClients([]);
+    setProducts([]);
     setSelectedInvoiceForA4(null);
     setSuccessInvoice(null);
     setEditingInvoice(null);
@@ -373,9 +422,13 @@ export default function App() {
     setIsAuthenticated(false);
   };
 
+  const handleLoginDone = () => {
+    setIsAuthenticated(true);
+  };
+
   // Se não autenticado: tela de login limpa e corporativa
   if (!isAuthenticated) {
-    return <LoginScreen onLogin={() => setIsAuthenticated(true)} />;
+    return <LoginScreen onLogin={handleLoginDone} />;
   }
 
   return (
