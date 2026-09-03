@@ -12,9 +12,25 @@ import {
   ChevronRight,
   Calendar,
 } from 'lucide-react';
-import { Invoice, InvoiceStatus } from '../types';
+import { Invoice, InvoiceStatus, DocumentType } from '../types';
 import { formatKz } from '../utils/formatters';
 import { DashboardAnalytics } from './DashboardAnalytics';
+
+function getDocTypeLabel(type?: DocumentType): string {
+  switch (type) {
+    case 'orcamento':
+      return 'Orçamento';
+    case 'recibo':
+      return 'Recibo';
+    case 'pro-forma':
+      return 'Pró-Forma';
+    case 'factura-recibo':
+      return 'Factura-Recibo';
+    case 'factura':
+    default:
+      return 'Factura';
+  }
+}
 
 interface DashboardViewProps {
   invoices: Invoice[];
@@ -51,8 +67,14 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
     0
   );
 
-  // Faturas recentes (últimas 6 faturas)
-  const recentInvoices = invoices.slice(0, 6);
+  // Faturas recentes (últimas 6 faturas, mais recentes primeiro)
+  const recentInvoices = [...invoices]
+    .sort((a, b) => {
+      const ta = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+      const tb = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+      return tb - ta;
+    })
+    .slice(0, 6);
 
   const getStatusBadge = (status: InvoiceStatus) => {
     switch (status) {
@@ -234,18 +256,18 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
           </button>
         </div>
 
-        {/* Tabela de Faturas Recentes */}
-        <div className="overflow-x-auto">
+        {/* Faturas Recentes — Desktop */}
+        <div className="hidden lg:block overflow-x-auto">
           <table className="w-full text-left border-collapse">
             <thead>
               <tr className="bg-slate-50/80 border-b border-slate-100 text-[11px] font-bold text-slate-500 uppercase tracking-wider">
-                <th className="py-3 px-4 sm:px-6">Nº Fatura</th>
+                <th className="py-3 px-6">Documento</th>
                 <th className="py-3 px-4">Cliente</th>
                 <th className="py-3 px-4">Data</th>
                 <th className="py-3 px-4">Vencimento</th>
                 <th className="py-3 px-4 text-right">Valor</th>
                 <th className="py-3 px-4 text-center">Estado</th>
-                <th className="py-3 px-4 sm:px-6 text-right">Ações</th>
+                <th className="py-3 px-6 text-right">Ações</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 text-xs sm:text-sm font-medium text-slate-700">
@@ -254,14 +276,14 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                   key={inv.id}
                   className="hover:bg-slate-50/70 transition-colors group"
                 >
-                  {/* Nº Fatura */}
-                  <td className="py-3.5 px-4 sm:px-6">
-                    <button
-                      onClick={() => onViewInvoice(inv)}
-                      className="font-bold text-[#0a1e42] group-hover:text-[#0056d6] hover:underline cursor-pointer flex items-center gap-1.5"
-                    >
-                      <span>{inv.number}</span>
-                    </button>
+                  {/* Documento */}
+                  <td className="py-3.5 px-6">
+                    <div className="font-bold text-[#0a1e42] group-hover:text-[#0056d6] transition-colors">
+                      {inv.number}
+                    </div>
+                    <div className="text-[11px] text-slate-400">
+                      {getDocTypeLabel(inv.docType)}
+                    </div>
                   </td>
 
                   {/* Cliente */}
@@ -297,7 +319,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                   </td>
 
                   {/* Ações */}
-                  <td className="py-3.5 px-4 sm:px-6 text-right whitespace-nowrap">
+                  <td className="py-3.5 px-6 text-right whitespace-nowrap">
                     <button
                       onClick={() => onViewInvoice(inv)}
                       className="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-[#0056d6] hover:text-white text-slate-700 font-bold text-xs transition-colors cursor-pointer"
@@ -322,6 +344,62 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
               )}
             </tbody>
           </table>
+        </div>
+
+        {/* Faturas Recentes — Mobile / Tablet */}
+        <div className="lg:hidden divide-y divide-slate-100">
+          {recentInvoices.length === 0 ? (
+            <div className="py-10 text-center text-slate-400 text-sm px-4">
+              Nenhuma fatura encontrada. Clique em "Nova Fatura" para emitir a primeira.
+            </div>
+          ) : (
+            recentInvoices.map((inv) => (
+              <div key={inv.id} className="p-4">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <button
+                      onClick={() => onViewInvoice(inv)}
+                      className="font-bold text-[#0a1e42] hover:text-[#0056d6] cursor-pointer text-sm truncate block"
+                    >
+                      {inv.number}
+                    </button>
+                    <div className="text-[11px] text-slate-400">
+                      {getDocTypeLabel(inv.docType)} • {inv.clientName}
+                    </div>
+                  </div>
+                  {getStatusBadge(inv.status)}
+                </div>
+
+                <div className="mt-3 grid grid-cols-3 gap-2 text-[11px]">
+                  <div className="rounded-lg bg-slate-50 px-2.5 py-1.5">
+                    <span className="block text-[10px] uppercase text-slate-400 font-semibold">
+                      Data
+                    </span>
+                    <span className="font-semibold text-slate-700">{inv.date}</span>
+                  </div>
+                  <div className="rounded-lg bg-slate-50 px-2.5 py-1.5">
+                    <span className="block text-[10px] uppercase text-slate-400 font-semibold">
+                      Vencimento
+                    </span>
+                    <span className="font-semibold text-slate-700">{inv.dueDate}</span>
+                  </div>
+                  <div className="rounded-lg bg-slate-50 px-2.5 py-1.5">
+                    <span className="block text-[10px] uppercase text-slate-400 font-semibold">
+                      Valor
+                    </span>
+                    <span className="font-bold text-[#0a1e42]">{formatKz(inv.total)}</span>
+                  </div>
+                </div>
+
+                <button
+                  onClick={() => onViewInvoice(inv)}
+                  className="mt-3 w-full py-2 rounded-xl bg-slate-100 hover:bg-[#0056d6] hover:text-white text-slate-700 font-bold text-xs transition-colors cursor-pointer"
+                >
+                  Visualizar fatura
+                </button>
+              </div>
+            ))
+          )}
         </div>
       </div>
     </div>

@@ -269,24 +269,24 @@ export const InvoiceA4View: React.FC<InvoiceA4ViewProps> = ({
           className="print-container w-[794px] max-w-full bg-white rounded-2xl sm:rounded-3xl shadow-md border border-slate-200/90 text-slate-800 print:shadow-none print:border-none print:p-0 print:m-0 overflow-hidden"
         >
           {/* Top Padding */}
-          <div className="p-8 sm:p-12 space-y-6">
+          <div className="p-6 sm:p-8 space-y-4">
             {/* 1. Header Oficial PS */}
-            <div className="flex flex-col sm:flex-row justify-between items-start gap-4 pb-4">
+            <div className="flex flex-col sm:flex-row justify-between items-start gap-4 pb-3">
               {/* Logótipo & Marca */}
-              <div className="flex items-center gap-3.5">
+              <div className="flex items-center gap-3">
                 <img
                   src={companyInfo.logoUrl || LOGO_SRC}
                   alt="PS – Comércio e Prestação de Serviços"
-                  className="w-20 h-20 sm:w-24 sm:h-24 object-contain"
+                  className="w-16 h-16 sm:w-20 sm:h-20 object-contain"
                 />
                 <div className="space-y-0.5">
-                  <h1 className="text-xl sm:text-2xl font-black text-[#0a1e42] tracking-tight leading-none uppercase">
+                  <h1 className="text-lg sm:text-xl font-black text-[#0a1e42] tracking-tight leading-none uppercase">
                     PS – COMÉRCIO E PRESTAÇÃO DE SERVIÇOS
                   </h1>
                   <p className="text-sm font-semibold italic text-[#d49419] leading-tight">
                     {companyInfo.slogan || 'Soluções para o seu negócio crescer'}
                   </p>
-                  <p className="text-[10px] sm:text-[11px] font-medium text-slate-600 leading-snug">
+                  <p className="text-[10px] font-medium text-slate-600 leading-snug">
                     {companyInfo.subSlogan ||
                       'Assistência em Contabilidade | Assistência em Administração | Soluções Tecnológicas | Serviços Diversos'}
                   </p>
@@ -295,8 +295,8 @@ export const InvoiceA4View: React.FC<InvoiceA4ViewProps> = ({
 
               {/* Top Right Document Title & Number Badge for Factura, Pró-Forma, Factura-Recibo */}
               {invoice.docType !== 'orcamento' && invoice.docType !== 'recibo' && (
-                <div className="text-left sm:text-right space-y-1 self-start sm:self-auto min-w-[200px]">
-                  <h2 className="text-lg sm:text-xl font-black text-[#0a1e42] uppercase tracking-wide">
+                <div className="text-left sm:text-right space-y-1 self-start sm:self-auto min-w-[190px]">
+                  <h2 className="text-lg font-black text-[#0a1e42] uppercase tracking-wide">
                     {invoice.docType === 'pro-forma'
                       ? 'FACTURA PRÓ-FORMA'
                       : invoice.docType === 'factura-recibo'
@@ -313,8 +313,8 @@ export const InvoiceA4View: React.FC<InvoiceA4ViewProps> = ({
 
               {/* Top Right for Recibo */}
               {invoice.docType === 'recibo' && (
-                <div className="text-left sm:text-right space-y-1 min-w-[180px]">
-                  <div className="border-2 border-slate-300 rounded-xl px-4 py-2 text-center bg-slate-50/50">
+                <div className="text-left sm:text-right space-y-1 min-w-[170px]">
+                  <div className="border-2 border-slate-300 rounded-xl px-4 py-1.5 text-center bg-slate-50/50">
                     <span className="text-[11px] font-extrabold text-slate-600 block uppercase">
                       RECIBO N.º
                     </span>
@@ -328,11 +328,11 @@ export const InvoiceA4View: React.FC<InvoiceA4ViewProps> = ({
 
             {/* 2. Título Central com Traço Dourado (Para Orçamento e Recibo) */}
             {invoice.docType === 'orcamento' && (
-              <div className="text-center py-2">
-                <h2 className="text-xl sm:text-2xl font-black text-[#0a1e42] tracking-wider uppercase">
+              <div className="text-center py-1">
+                <h2 className="text-xl font-black text-[#0a1e42] tracking-wider uppercase">
                   ORÇAMENTO / PROPOSTA COMERCIAL
                 </h2>
-                <div className="flex items-center justify-center gap-2 mt-1">
+                <div className="flex items-center justify-center gap-2 mt-0.5">
                   <div className="h-0.5 w-24 bg-[#d49419]" />
                   <div className="w-2 h-2 rounded-full bg-[#d49419]" />
                   <div className="h-0.5 w-24 bg-[#d49419]" />
@@ -341,11 +341,11 @@ export const InvoiceA4View: React.FC<InvoiceA4ViewProps> = ({
             )}
 
             {invoice.docType === 'recibo' && (
-              <div className="text-center py-2">
-                <h2 className="text-2xl sm:text-3xl font-black text-[#0a1e42] tracking-wider uppercase">
+              <div className="text-center py-1">
+                <h2 className="text-2xl font-black text-[#0a1e42] tracking-wider uppercase">
                   RECIBO DE PAGAMENTO
                 </h2>
-                <div className="flex items-center justify-center gap-2 mt-1">
+                <div className="flex items-center justify-center gap-2 mt-0.5">
                   <div className="h-0.5 w-28 bg-[#d49419]" />
                   <div className="w-2 h-2 rounded-full bg-[#d49419]" />
                   <div className="h-0.5 w-28 bg-[#d49419]" />
@@ -357,14 +357,14 @@ export const InvoiceA4View: React.FC<InvoiceA4ViewProps> = ({
 
             {/* CASO A: ORÇAMENTO / PROPOSTA COMERCIAL */}
             {invoice.docType === 'orcamento' && (
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 {/* Caixa Esquerda: Orçamento n.º, Data, Validade */}
-                <div className="rounded-2xl border-2 border-slate-300 p-4 relative bg-white">
-                  <div className="flex items-start gap-3">
-                    <div className="w-8 h-8 rounded-full bg-[#0a1e42] text-white flex items-center justify-center shrink-0 mt-0.5">
-                      <FileText className="w-4 h-4" />
+                <div className="rounded-xl border-2 border-slate-300 p-3 relative bg-white">
+                  <div className="flex items-start gap-2.5">
+                    <div className="w-7 h-7 rounded-full bg-[#0a1e42] text-white flex items-center justify-center shrink-0 mt-0.5">
+                      <FileText className="w-3.5 h-3.5" />
                     </div>
-                    <div className="space-y-2 text-xs text-slate-700 flex-1">
+                    <div className="space-y-1.5 text-xs text-slate-700 flex-1">
                       <div className="flex items-center gap-2">
                         <span className="font-bold text-slate-900">Orçamento n.º:</span>
                         <span className="font-mono font-bold text-[#0056d6]">
@@ -386,28 +386,28 @@ export const InvoiceA4View: React.FC<InvoiceA4ViewProps> = ({
                 </div>
 
                 {/* Caixa Direita: Proposta elaborada para */}
-                <div className="rounded-2xl border-2 border-slate-300 p-4 relative bg-white">
-                  <div className="flex items-start gap-3">
-                    <div className="w-8 h-8 rounded-full bg-[#0a1e42] text-white flex items-center justify-center shrink-0 mt-0.5">
-                      <User className="w-4 h-4" />
+                <div className="rounded-xl border-2 border-slate-300 p-3 relative bg-white">
+                  <div className="flex items-start gap-2.5">
+                    <div className="w-7 h-7 rounded-full bg-[#0a1e42] text-white flex items-center justify-center shrink-0 mt-0.5">
+                      <User className="w-3.5 h-3.5" />
                     </div>
-                    <div className="space-y-1.5 text-xs text-slate-700 flex-1">
-                      <div className="font-black text-slate-900 text-xs uppercase mb-1">
+                    <div className="space-y-1 text-xs text-slate-700 flex-1">
+                      <div className="font-black text-slate-900 text-xs uppercase mb-0.5">
                         Proposta elaborada para:
                       </div>
-                      <div className="grid grid-cols-[60px_1fr] gap-1">
+                      <div className="grid grid-cols-[58px_1fr] gap-1">
                         <span className="font-bold text-slate-800">Cliente:</span>
                         <span className="font-bold text-[#0a1e42]">{invoice.clientName}</span>
                       </div>
-                      <div className="grid grid-cols-[60px_1fr] gap-1">
+                      <div className="grid grid-cols-[58px_1fr] gap-1">
                         <span className="font-bold text-slate-800">Telefone:</span>
                         <span>{invoice.clientPhone || '—'}</span>
                       </div>
-                      <div className="grid grid-cols-[60px_1fr] gap-1">
+                      <div className="grid grid-cols-[58px_1fr] gap-1">
                         <span className="font-bold text-slate-800">E-mail:</span>
                         <span>{invoice.clientEmail || '—'}</span>
                       </div>
-                      <div className="grid grid-cols-[60px_1fr] gap-1">
+                      <div className="grid grid-cols-[58px_1fr] gap-1">
                         <span className="font-bold text-slate-800">Endereço:</span>
                         <span>{invoice.clientAddress || '—'}</span>
                       </div>
@@ -419,32 +419,38 @@ export const InvoiceA4View: React.FC<InvoiceA4ViewProps> = ({
 
             {/* CASO B: RECIBO DE PAGAMENTO */}
             {invoice.docType === 'recibo' && (
-              <div className="space-y-4">
+              <div className="space-y-3">
                 {/* 2 Caixas: Valor Recebido & Data */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div className="rounded-2xl border-2 border-slate-300 p-4 flex items-center gap-4 bg-white">
-                    <div className="w-10 h-10 rounded-xl bg-[#0a1e42] text-white flex items-center justify-center">
-                      <Coins className="w-5 h-5 text-amber-400" />
-                    </div>
-                    <div>
-                      <span className="text-[11px] font-bold text-slate-600 block uppercase">
-                        VALOR RECEBIDO (KZ):
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div className="rounded-xl border-2 border-slate-300 bg-white overflow-hidden">
+                    <div className="bg-[#0a1e42] text-white px-3.5 py-1.5 flex items-center gap-2">
+                      <Coins className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+                      <span className="text-[11px] font-black tracking-wider uppercase">
+                        Valor Recebido
                       </span>
-                      <span className="text-xl sm:text-2xl font-black text-[#0a1e42] font-mono">
-                        KZ {formatKz(invoice.total)}
+                    </div>
+                    <div className="p-3 flex items-center justify-between gap-3">
+                      <span className="text-[11px] font-semibold text-slate-500 uppercase shrink-0">
+                        Total (KZ)
+                      </span>
+                      <span className="text-lg sm:text-xl font-black text-[#0a1e42] font-mono text-right">
+                        {formatKz(invoice.total)}
                       </span>
                     </div>
                   </div>
 
-                  <div className="rounded-2xl border-2 border-slate-300 p-4 flex items-center gap-4 bg-white">
-                    <div className="w-10 h-10 rounded-xl bg-[#0a1e42] text-white flex items-center justify-center">
-                      <Calendar className="w-5 h-5 text-amber-400" />
-                    </div>
-                    <div>
-                      <span className="text-[11px] font-bold text-slate-600 block uppercase">
-                        DATA DO RECEBIMENTO:
+                  <div className="rounded-xl border-2 border-slate-300 bg-white overflow-hidden">
+                    <div className="bg-[#0a1e42] text-white px-3.5 py-1.5 flex items-center gap-2">
+                      <Calendar className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+                      <span className="text-[11px] font-black tracking-wider uppercase">
+                        Data do Recebimento
                       </span>
-                      <span className="text-lg sm:text-xl font-black text-[#0a1e42] font-mono">
+                    </div>
+                    <div className="p-3 flex items-center justify-between gap-3">
+                      <span className="text-[11px] font-semibold text-slate-500 uppercase shrink-0">
+                        Data
+                      </span>
+                      <span className="text-lg font-black text-[#0a1e42] font-mono">
                         {invoice.date}
                       </span>
                     </div>
@@ -452,7 +458,7 @@ export const InvoiceA4View: React.FC<InvoiceA4ViewProps> = ({
                 </div>
 
                 {/* Texto do Recibo em Parágrafo com sublinhado */}
-                <div className="bg-slate-50/70 p-5 rounded-2xl border border-slate-200 text-xs sm:text-sm text-slate-800 leading-relaxed space-y-2">
+                <div className="bg-slate-50/70 p-4 rounded-xl border border-slate-200 text-xs sm:text-sm text-slate-800 leading-relaxed space-y-1.5">
                   <p>
                     Recebi(emos) de <strong className="text-[#0a1e42] underline">{invoice.clientName}</strong>
                   </p>
@@ -474,16 +480,16 @@ export const InvoiceA4View: React.FC<InvoiceA4ViewProps> = ({
 
             {/* CASO C: FACTURA, FACTURA PRÓ-FORMA E FACTURA-RECIBO */}
             {invoice.docType !== 'orcamento' && invoice.docType !== 'recibo' && (
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 {/* Caixa Esquerda: DADOS DO CLIENTE */}
-                <div className="rounded-2xl border-2 border-slate-300 overflow-hidden bg-white">
-                  <div className="bg-[#0a1e42] text-white px-4 py-1.5 flex items-center gap-2">
+                <div className="rounded-xl border-2 border-slate-300 overflow-hidden bg-white">
+                  <div className="bg-[#0a1e42] text-white px-3.5 py-1 flex items-center gap-2">
                     <User className="w-3.5 h-3.5" />
-                    <span className="text-xs font-black tracking-wider uppercase">
+                    <span className="text-[11px] font-black tracking-wider uppercase">
                       DADOS DO CLIENTE
                     </span>
                   </div>
-                  <div className="p-4 space-y-1.5 text-xs text-slate-700">
+                  <div className="p-3 space-y-1 text-xs text-slate-700">
                     <div className="grid grid-cols-[65px_1fr] gap-1">
                       <span className="font-bold text-slate-800">Cliente:</span>
                       <span className="font-bold text-[#0a1e42]">{invoice.clientName}</span>
@@ -510,7 +516,7 @@ export const InvoiceA4View: React.FC<InvoiceA4ViewProps> = ({
                 </div>
 
                 {/* Caixa Direita: Datas & Referências */}
-                <div className="rounded-2xl border-2 border-slate-300 p-4 space-y-2 text-xs text-slate-700 bg-white">
+                <div className="rounded-xl border-2 border-slate-300 p-3 space-y-1.5 text-xs text-slate-700 bg-white">
                   <div className="flex items-center gap-2.5">
                     <div className="w-6 h-6 rounded-full bg-[#0a1e42] text-white flex items-center justify-center shrink-0">
                       <Calendar className="w-3 h-3" />
@@ -581,12 +587,12 @@ export const InvoiceA4View: React.FC<InvoiceA4ViewProps> = ({
             )}
 
             {/* 5. TABELA DE ITENS COM CABEÇALHO AZUL ESCURO (#0a1e42) */}
-            <div className="border border-slate-300 rounded-xl overflow-hidden">
-              <table className="w-full text-left border-collapse text-xs">
+            <div className="border border-slate-300 rounded-lg overflow-hidden">
+              <table className="w-full text-left border-collapse text-[11px]">
                 <thead>
                   <tr className="bg-[#0a1e42] text-white uppercase text-[10px] tracking-wider">
-                    <th className="py-2.5 px-3 text-center w-12 border-r border-slate-700">N.º</th>
-                    <th className="py-2.5 px-3 border-r border-slate-700">
+                    <th className="py-2 px-3 text-center w-10 border-r border-slate-700">N.º</th>
+                    <th className="py-2 px-3 border-r border-slate-700">
                       {invoice.docType === 'orcamento'
                         ? 'DESCRIÇÃO DO SERVIÇO'
                         : invoice.docType === 'recibo'
@@ -594,39 +600,39 @@ export const InvoiceA4View: React.FC<InvoiceA4ViewProps> = ({
                         : 'DESCRIÇÃO DOS BENS / SERVIÇOS'}
                     </th>
                     {invoice.docType !== 'recibo' && (
-                      <th className="py-2.5 px-3 border-r border-slate-700">
+                      <th className="py-2 px-3 border-r border-slate-700">
                         DETALHAMENTO / ESPECIFICAÇÃO
                       </th>
                     )}
-                    <th className="py-2.5 px-3 text-center w-16 border-r border-slate-700">QUANT.</th>
-                    <th className="py-2.5 px-3 text-right w-28 border-r border-slate-700">
+                    <th className="py-2 px-3 text-center w-14 border-r border-slate-700">QUANT.</th>
+                    <th className="py-2 px-3 text-right w-24 border-r border-slate-700">
                       VALOR UNIT. (KZ)
                     </th>
-                    <th className="py-2.5 px-3 text-right w-32">VALOR TOTAL (KZ)</th>
+                    <th className="py-2 px-3 text-right w-28">VALOR TOTAL (KZ)</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-200">
                   {invoice.items && invoice.items.length > 0 ? (
                     invoice.items.map((item, index) => (
                       <tr key={item.id || index} className="hover:bg-slate-50/50">
-                        <td className="py-2.5 px-3 text-center font-mono text-slate-500 border-r border-slate-200">
+                        <td className="py-2 px-3 text-center font-mono text-slate-500 border-r border-slate-200">
                           {String(index + 1).padStart(2, '0')}
                         </td>
-                        <td className="py-2.5 px-3 font-bold text-slate-900 border-r border-slate-200">
+                        <td className="py-2 px-3 font-bold text-slate-900 border-r border-slate-200">
                           {item.description}
                         </td>
                         {invoice.docType !== 'recibo' && (
-                          <td className="py-2.5 px-3 text-slate-600 border-r border-slate-200 text-[11px]">
+                          <td className="py-2 px-3 text-slate-600 border-r border-slate-200 text-[10.5px]">
                             {item.specification || '—'}
                           </td>
                         )}
-                        <td className="py-2.5 px-3 text-center font-mono font-medium border-r border-slate-200">
+                        <td className="py-2 px-3 text-center font-mono font-medium border-r border-slate-200">
                           {item.quantity}
                         </td>
-                        <td className="py-2.5 px-3 text-right font-mono text-slate-700 border-r border-slate-200">
+                        <td className="py-2 px-3 text-right font-mono text-slate-700 border-r border-slate-200">
                           {formatKzDecimal(item.price)}
                         </td>
-                        <td className="py-2.5 px-3 text-right font-mono font-bold text-slate-900">
+                        <td className="py-2 px-3 text-right font-mono font-bold text-slate-900">
                           {formatKzDecimal(item.total)}
                         </td>
                       </tr>
@@ -635,7 +641,7 @@ export const InvoiceA4View: React.FC<InvoiceA4ViewProps> = ({
                     <tr>
                       <td
                         colSpan={invoice.docType === 'recibo' ? 5 : 6}
-                        className="py-4 text-center text-slate-400"
+                        className="py-3 text-center text-slate-400"
                       >
                         Nenhum item adicionado.
                       </td>
@@ -646,11 +652,11 @@ export const InvoiceA4View: React.FC<InvoiceA4ViewProps> = ({
                   <tr className="border-t-2 border-[#0a1e42] bg-slate-50 font-black">
                     <td
                       colSpan={invoice.docType === 'recibo' ? 4 : 5}
-                      className="py-2.5 px-4 text-right text-xs uppercase tracking-wider text-[#0a1e42]"
+                      className="py-2 px-4 text-right text-xs uppercase tracking-wider text-[#0a1e42]"
                     >
                       TOTAL GERAL (KZ):
                     </td>
-                    <td className="py-2.5 px-3 text-right font-mono text-sm text-[#0a1e42]">
+                    <td className="py-2 px-3 text-right font-mono text-sm text-[#0a1e42]">
                       {formatKz(invoice.total)}
                     </td>
                   </tr>
@@ -659,10 +665,10 @@ export const InvoiceA4View: React.FC<InvoiceA4ViewProps> = ({
             </div>
 
             {/* 6. BLOCOS DE CONDIÇÕES & RESUMO FINANCEIRO (LADO A LADO) */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               {/* BLOCO ESQUERDO: CONDIÇÕES / FORMA DE PAGAMENTO */}
               {invoice.docType === 'orcamento' && (
-                <div className="rounded-2xl border-2 border-slate-300 p-4 space-y-2 text-xs text-slate-700 bg-white">
+                <div className="rounded-xl border-2 border-slate-300 p-3 space-y-1.5 text-xs text-slate-700 bg-white">
                   <div className="flex items-center gap-2 font-black text-[#0a1e42] uppercase text-xs pb-1 border-b border-slate-200">
                     <CheckSquare className="w-4 h-4 text-[#0056d6]" />
                     <span>CONDIÇÕES DA PROPOSTA</span>
@@ -712,7 +718,7 @@ export const InvoiceA4View: React.FC<InvoiceA4ViewProps> = ({
               )}
 
               {invoice.docType === 'recibo' && (
-                <div className="rounded-2xl border-2 border-slate-300 p-4 space-y-2 text-xs text-slate-700 bg-white">
+                <div className="rounded-xl border-2 border-slate-300 p-3 space-y-1.5 text-xs text-slate-700 bg-white">
                   <div className="flex items-center gap-2 font-black text-[#0a1e42] uppercase text-xs pb-1 border-b border-slate-200">
                     <CreditCard className="w-4 h-4 text-[#0056d6]" />
                     <span>FORMA DE PAGAMENTO:</span>
@@ -763,7 +769,7 @@ export const InvoiceA4View: React.FC<InvoiceA4ViewProps> = ({
               )}
 
               {invoice.docType !== 'orcamento' && invoice.docType !== 'recibo' && (
-                <div className="rounded-2xl border-2 border-slate-300 p-4 space-y-2 text-xs text-slate-700 bg-white">
+                <div className="rounded-xl border-2 border-slate-300 p-3 space-y-1.5 text-xs text-slate-700 bg-white">
                   <div className="flex items-center gap-2 font-black text-[#0a1e42] uppercase text-xs pb-1 border-b border-slate-200">
                     <CheckSquare className="w-4 h-4 text-[#0056d6]" />
                     <span>CONDIÇÕES COMERCIAIS</span>
@@ -795,14 +801,14 @@ export const InvoiceA4View: React.FC<InvoiceA4ViewProps> = ({
 
               {/* BLOCO DIREITO: RESUMO FINANCEIRO (Para todos exceto recibo simplificado) */}
               {invoice.docType !== 'recibo' ? (
-                <div className="rounded-2xl border-2 border-slate-300 overflow-hidden bg-white">
-                  <div className="bg-[#0a1e42] text-white px-4 py-1.5 flex items-center gap-2">
+                <div className="rounded-xl border-2 border-slate-300 overflow-hidden bg-white">
+                  <div className="bg-[#0a1e42] text-white px-3.5 py-1 flex items-center gap-2">
                     <Coins className="w-3.5 h-3.5 text-amber-400" />
-                    <span className="text-xs font-black tracking-wider uppercase">
+                    <span className="text-[11px] font-black tracking-wider uppercase">
                       RESUMO FINANCEIRO
                     </span>
                   </div>
-                  <div className="p-4 space-y-2 text-xs">
+                  <div className="p-3 space-y-1.5 text-xs">
                     <div className="flex justify-between items-center text-slate-600">
                       <span>Subtotal (KZ):</span>
                       <span className="font-mono font-medium">{formatKzDecimal(invoice.subtotal)}</span>
@@ -819,7 +825,7 @@ export const InvoiceA4View: React.FC<InvoiceA4ViewProps> = ({
                       <span>Impostos (se aplicável):</span>
                       <span className="font-mono font-medium">{formatKzDecimal(invoice.taxTotal)}</span>
                     </div>
-                    <div className="pt-2 border-t-2 border-slate-300 flex justify-between items-center font-black text-sm text-[#0a1e42]">
+                    <div className="pt-1.5 border-t-2 border-slate-300 flex justify-between items-center font-black text-sm text-[#0a1e42]">
                       <span>TOTAL GERAL (KZ):</span>
                       <span className="font-mono text-base font-black">{formatKz(invoice.total)}</span>
                     </div>
@@ -827,7 +833,7 @@ export const InvoiceA4View: React.FC<InvoiceA4ViewProps> = ({
                 </div>
               ) : (
                 /* Para recibo, a caixa direita é OBSERVAÇÕES */
-                <div className="rounded-2xl border-2 border-slate-300 p-4 space-y-2 text-xs text-slate-700 bg-white">
+                <div className="rounded-xl border-2 border-slate-300 p-3 space-y-1.5 text-xs text-slate-700 bg-white">
                   <div className="flex items-center gap-2 font-black text-[#0a1e42] uppercase text-xs pb-1 border-b border-slate-200">
                     <PenTool className="w-4 h-4 text-[#0056d6]" />
                     <span>OBSERVAÇÕES:</span>
@@ -842,9 +848,9 @@ export const InvoiceA4View: React.FC<InvoiceA4ViewProps> = ({
 
             {/* 7. DADOS BANCÁRIOS & OBSERVAÇÕES (Para Factura, Pró-Forma e Factura-Recibo) */}
             {invoice.docType !== 'orcamento' && invoice.docType !== 'recibo' && (
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 {/* Dados Bancários */}
-                <div className="rounded-2xl border-2 border-slate-300 p-4 space-y-1.5 text-xs text-slate-700 bg-white">
+                <div className="rounded-xl border-2 border-slate-300 p-3 space-y-1 text-xs text-slate-700 bg-white">
                   <div className="flex items-center gap-2 font-black text-[#0a1e42] uppercase text-xs pb-1 border-b border-slate-200">
                     <Building className="w-4 h-4 text-[#0056d6]" />
                     <span>DADOS BANCÁRIOS</span>
@@ -872,7 +878,7 @@ export const InvoiceA4View: React.FC<InvoiceA4ViewProps> = ({
                 </div>
 
                 {/* Observações */}
-                <div className="rounded-2xl border-2 border-slate-300 p-4 space-y-1.5 text-xs text-slate-700 bg-white">
+                <div className="rounded-xl border-2 border-slate-300 p-3 space-y-1 text-xs text-slate-700 bg-white">
                   <div className="flex items-center gap-2 font-black text-[#0a1e42] uppercase text-xs pb-1 border-b border-slate-200">
                     <PenTool className="w-4 h-4 text-[#0056d6]" />
                     <span>OBSERVAÇÕES</span>
@@ -887,7 +893,7 @@ export const InvoiceA4View: React.FC<InvoiceA4ViewProps> = ({
 
             {/* OBSERVAÇÕES / INFORMAÇÕES ADICIONAIS (Para Orçamento) */}
             {invoice.docType === 'orcamento' && (
-              <div className="rounded-2xl border-2 border-slate-300 p-4 space-y-1.5 text-xs text-slate-700 bg-white">
+              <div className="rounded-xl border-2 border-slate-300 p-3 space-y-1 text-xs text-slate-700 bg-white">
                 <div className="flex items-center gap-2 font-black text-[#0a1e42] uppercase text-xs pb-1 border-b border-slate-200">
                   <PenTool className="w-4 h-4 text-[#0056d6]" />
                   <span>OBSERVAÇÕES / INFORMAÇÕES ADICIONAIS</span>
@@ -901,7 +907,7 @@ export const InvoiceA4View: React.FC<InvoiceA4ViewProps> = ({
             )}
 
             {/* 8. AGRADECIMENTO & DATA LOCAL */}
-            <div className="pt-2 flex flex-col sm:flex-row justify-between items-center text-xs text-slate-700 gap-2">
+            <div className="pt-1 flex flex-col sm:flex-row justify-between items-center text-xs text-slate-700 gap-2">
               <div className="text-center sm:text-left">
                 {invoice.docType === 'recibo' ? (
                   <p className="font-medium">Por ser verdade, firmo(amos) o presente recibo.</p>
@@ -925,7 +931,7 @@ export const InvoiceA4View: React.FC<InvoiceA4ViewProps> = ({
             </div>
 
             {/* 9. ASSINATURAS & CARIMBO */}
-            <div className="pt-6 grid grid-cols-2 gap-8 text-center">
+            <div className="pt-4 grid grid-cols-2 gap-8 text-center">
               <div>
                 <div className="border-t border-slate-900 mx-auto w-4/5 pt-1.5">
                   <span className="font-bold text-xs text-slate-900 block leading-tight">
@@ -951,7 +957,7 @@ export const InvoiceA4View: React.FC<InvoiceA4ViewProps> = ({
 
             {/* Mensagem adicional de encerramento para Recibo */}
             {invoice.docType === 'recibo' && (
-              <div className="text-center pt-2">
+              <div className="text-center">
                 <span className="text-base font-bold italic text-[#d49419]">
                   Agradecemos a sua preferência!
                 </span>
@@ -960,26 +966,26 @@ export const InvoiceA4View: React.FC<InvoiceA4ViewProps> = ({
           </div>
 
           {/* 10. RODAPÉ OFICIAL: BANNER AZUL ESCURO (#0a1e42) COM FAIXA CURVA DOURADA E BRANCA */}
-          <div className="relative bg-[#0a1e42] text-white mt-6 overflow-hidden">
+          <div className="relative bg-[#0a1e42] text-white mt-4 overflow-hidden">
             {/* Faixas curvas decorativas (dourada + branca) a subir para o lado direito */}
             <svg
-              className="absolute -top-1 left-0 w-full h-8"
-              viewBox="0 0 850 32"
+              className="absolute -top-1 left-0 w-full h-6"
+              viewBox="0 0 850 24"
               preserveAspectRatio="none"
               aria-hidden="true"
             >
               <path
-                d="M0,20 C 160,32 320,26 470,16 C 600,8 700,4 850,2 L850,0 L0,0 Z"
+                d="M0,16 C 160,26 320,20 470,12 C 600,7 700,4 850,2 L850,0 L0,0 Z"
                 fill="#d49419"
               />
               <path
-                d="M0,26 C 180,36 360,30 520,22 C 640,16 740,10 850,9 L850,0 L0,0 Z"
+                d="M0,21 C 180,29 360,24 520,17 C 640,12 740,8 850,7 L850,0 L0,0 Z"
                 fill="#ffffff"
               />
             </svg>
 
-            <div className="pt-10 pb-6 px-6 sm:px-10">
-              <div className="flex flex-col sm:flex-row items-center justify-between gap-4 text-[11px] sm:text-xs">
+            <div className="pt-7 pb-4 px-6 sm:px-10">
+              <div className="flex flex-col sm:flex-row items-center justify-between gap-3 text-[11px]">
                 {/* Localização */}
                 <div className="flex items-center gap-2 text-slate-100 flex-1 justify-center">
                   <MapPin className="w-4 h-4 text-amber-400 shrink-0" />

@@ -14,6 +14,7 @@ import {
   Check,
 } from 'lucide-react';
 import { Client, Invoice } from '../types';
+import { formatKz } from '../utils/formatters';
 
 interface ClientsViewProps {
   clients: Client[];
@@ -104,6 +105,17 @@ export const ClientsView: React.FC<ClientsViewProps> = ({
     ).length;
   };
 
+  // Soma dos valores das faturas (pagas + pendentes) de um cliente
+  const getClientTotalInvoiced = (clientName: string) => {
+    return invoices
+      .filter(
+        (i) =>
+          i.clientName.toLowerCase().trim() === clientName.toLowerCase().trim() &&
+          (i.status === 'Paga' || i.status === 'Pendente')
+      )
+      .reduce((sum, i) => sum + (i.total || 0), 0);
+  };
+
   const filteredClients = clients.filter((c) => {
     const term = searchTerm.toLowerCase().trim();
     return (
@@ -152,66 +164,182 @@ export const ClientsView: React.FC<ClientsViewProps> = ({
         </div>
       </div>
 
-      {/* Tabela de Clientes */}
-      <div className="bg-white rounded-3xl border border-slate-200/90 shadow-xs overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse">
-            <thead>
-              <tr className="bg-slate-50/90 border-b border-slate-200/80 text-[11px] font-bold text-slate-500 uppercase tracking-wider">
-                <th className="py-3.5 px-4 sm:px-6">Nome / Empresa</th>
-                <th className="py-3.5 px-4">NIF</th>
-                <th className="py-3.5 px-4">Telefone</th>
-                <th className="py-3.5 px-4">Email</th>
-                <th className="py-3.5 px-4 text-center">Nº de Faturas</th>
-                <th className="py-3.5 px-4 sm:px-6 text-right">Ações</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100 text-xs sm:text-sm font-medium text-slate-700">
-              {filteredClients.map((client) => {
-                const count = getClientInvoicesCount(client.name);
-                return (
-                  <tr
-                    key={client.id}
-                    className="hover:bg-slate-50/70 transition-colors group"
-                  >
-                    {/* Nome */}
-                    <td className="py-3.5 px-4 sm:px-6">
-                      <div className="font-extrabold text-[#0a1e42] group-hover:text-[#0056d6] transition-colors">
-                        {client.name}
-                      </div>
-                      {client.address && (
-                        <div className="text-[11px] text-slate-400 truncate max-w-[240px]">
-                          {client.address}, {client.city}
+      {/* Lista de Clientes */}
+      {filteredClients.length === 0 ? (
+        <div className="bg-white rounded-3xl border border-slate-200/90 shadow-xs px-6 py-16 text-center">
+          <div className="w-16 h-16 rounded-2xl bg-slate-100 text-slate-400 flex items-center justify-center mx-auto">
+            <Users className="w-8 h-8" />
+          </div>
+          <h3 className="mt-4 text-base font-bold text-slate-800">
+            {searchTerm ? 'Nenhum cliente corresponde à pesquisa' : 'Ainda não existem clientes'}
+          </h3>
+          <p className="mt-1 text-xs text-slate-500 max-w-sm mx-auto">
+            {searchTerm
+              ? 'Tenta alterar o termo de pesquisa.'
+              : 'Adicione o primeiro cliente para o poder selecionar automaticamente ao emitir faturas.'}
+          </p>
+          {!searchTerm && (
+            <button
+              type="button"
+              onClick={openNewModal}
+              className="mt-5 px-4 py-2.5 rounded-xl bg-[#0056d6] hover:bg-[#004dc0] text-white text-sm font-bold inline-flex items-center gap-2 cursor-pointer transition-colors"
+            >
+              <Plus className="w-4 h-4 stroke-[2.5]" />
+              Adicionar Cliente
+            </button>
+          )}
+        </div>
+      ) : (
+        <>
+          {/* Tabela de Clientes — Desktop */}
+          <div className="hidden lg:block bg-white rounded-3xl border border-slate-200/90 shadow-xs overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="w-full text-left border-collapse">
+                <thead>
+                  <tr className="bg-slate-50/90 border-b border-slate-200/80 text-[11px] font-bold text-slate-500 uppercase tracking-wider">
+                    <th className="py-3.5 px-6">Nome / Empresa</th>
+                    <th className="py-3.5 px-4">NIF</th>
+                    <th className="py-3.5 px-4">Contacto</th>
+                    <th className="py-3.5 px-4 text-center">Faturas</th>
+                    <th className="py-3.5 px-4 text-right">Total Faturado</th>
+                    <th className="py-3.5 px-6 text-right">Ações</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100 text-xs sm:text-sm font-medium text-slate-700">
+                  {filteredClients.map((client) => {
+                    const count = getClientInvoicesCount(client.name);
+                    const total = getClientTotalInvoiced(client.name);
+                    return (
+                      <tr
+                        key={client.id}
+                        className="hover:bg-slate-50/70 transition-colors group"
+                      >
+                        {/* Nome */}
+                        <td className="py-3.5 px-6">
+                          <div className="font-extrabold text-[#0a1e42] group-hover:text-[#0056d6] transition-colors">
+                            {client.name}
+                          </div>
+                          {client.address && (
+                            <div className="text-[11px] text-slate-400 flex items-center gap-1 truncate max-w-[240px]">
+                              <MapPin className="w-3 h-3 shrink-0" />
+                              <span className="truncate">
+                                {client.address}, {client.city}
+                              </span>
+                            </div>
+                          )}
+                        </td>
+
+                        {/* NIF */}
+                        <td className="py-3.5 px-4 whitespace-nowrap text-slate-700">
+                          {client.nif ? (
+                            <span className="font-mono">{client.nif}</span>
+                          ) : (
+                            <span className="text-slate-400 italic">Consumidor Final</span>
+                          )}
+                        </td>
+
+                        {/* Contacto */}
+                        <td className="py-3.5 px-4 text-slate-600">
+                          {client.phone && (
+                            <div className="flex items-center gap-1.5 whitespace-nowrap">
+                              <Phone className="w-3 h-3 text-slate-400" />
+                              <span>{client.phone}</span>
+                            </div>
+                          )}
+                          {client.email && (
+                            <div className="flex items-center gap-1.5 text-slate-500 truncate max-w-[180px]">
+                              <Mail className="w-3 h-3 text-slate-400 shrink-0" />
+                              <span className="truncate">{client.email}</span>
+                            </div>
+                          )}
+                          {!client.phone && !client.email && <span>—</span>}
+                        </td>
+
+                        {/* Nº de Faturas */}
+                        <td className="py-3.5 px-4 text-center whitespace-nowrap">
+                          <button
+                            onClick={() => onViewClientInvoices(client.name)}
+                            className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold transition-all cursor-pointer ${
+                              count > 0
+                                ? 'bg-blue-50 text-[#0056d6] hover:bg-[#0056d6] hover:text-white'
+                                : 'bg-slate-100 text-slate-500'
+                            }`}
+                            title="Ver faturas deste cliente"
+                          >
+                            <FileText className="w-3.5 h-3.5" />
+                            <span>{count}</span>
+                          </button>
+                        </td>
+
+                        {/* Total Faturado */}
+                        <td className="py-3.5 px-4 text-right font-bold text-[#0a1e42] whitespace-nowrap">
+                          {formatKz(total)}
+                        </td>
+
+                        {/* Ações */}
+                        <td className="py-3.5 px-6 text-right whitespace-nowrap">
+                          <div className="flex items-center justify-end gap-1">
+                            <button
+                              onClick={() => onViewClientInvoices(client.name)}
+                              className="p-2 rounded-lg text-slate-500 hover:text-[#0056d6] hover:bg-blue-50 transition-colors cursor-pointer"
+                              title="Ver faturas"
+                            >
+                              <FileText className="w-4 h-4" />
+                            </button>
+                            <button
+                              onClick={() => openEditModal(client)}
+                              className="p-2 rounded-lg text-slate-500 hover:text-[#0a1e42] hover:bg-slate-100 transition-colors cursor-pointer"
+                              title="Editar cliente"
+                            >
+                              <Edit className="w-4 h-4" />
+                            </button>
+                            <button
+                              onClick={() => onDeleteClient(client.id)}
+                              className="p-2 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer"
+                              title="Eliminar cliente"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          {/* Cartões de Cliente — Mobile / Tablet */}
+          <div className="lg:hidden space-y-3">
+            {filteredClients.map((client) => {
+              const count = getClientInvoicesCount(client.name);
+              const total = getClientTotalInvoiced(client.name);
+              return (
+                <div
+                  key={client.id}
+                  className="bg-white rounded-2xl border border-slate-200/90 shadow-xs overflow-hidden"
+                >
+                  <div className="p-4">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="flex items-center gap-3 min-w-0">
+                        <div className="w-11 h-11 shrink-0 rounded-full bg-[#0a1e42]/5 border border-slate-200 flex items-center justify-center">
+                          <Building className="w-5 h-5 text-[#0056d6]" />
                         </div>
-                      )}
-                    </td>
-
-                    {/* NIF */}
-                    <td className="py-3.5 px-4 whitespace-nowrap text-slate-700">
-                      {client.nif ? (
-                        <span className="font-mono">{client.nif}</span>
-                      ) : (
-                        <span className="text-slate-400 italic">Consumidor Final</span>
-                      )}
-                    </td>
-
-                    {/* Telefone */}
-                    <td className="py-3.5 px-4 whitespace-nowrap text-slate-600">
-                      {client.phone || '—'}
-                    </td>
-
-                    {/* Email */}
-                    <td className="py-3.5 px-4 text-slate-600 truncate max-w-[200px]">
-                      {client.email || '—'}
-                    </td>
-
-                    {/* Nº de Faturas */}
-                    <td className="py-3.5 px-4 text-center whitespace-nowrap">
+                        <div className="min-w-0">
+                          <div className="font-extrabold text-[#0a1e42] text-sm truncate">
+                            {client.name}
+                          </div>
+                          <div className="text-[11px] text-slate-400 truncate">
+                            {client.nif || 'Consumidor Final'}
+                          </div>
+                        </div>
+                      </div>
                       <button
                         onClick={() => onViewClientInvoices(client.name)}
-                        className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold transition-all cursor-pointer ${
+                        className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold shrink-0 cursor-pointer ${
                           count > 0
-                            ? 'bg-blue-50 text-[#0056d6] hover:bg-[#0056d6] hover:text-white'
+                            ? 'bg-blue-50 text-[#0056d6]'
                             : 'bg-slate-100 text-slate-500'
                         }`}
                         title="Ver faturas deste cliente"
@@ -219,45 +347,61 @@ export const ClientsView: React.FC<ClientsViewProps> = ({
                         <FileText className="w-3.5 h-3.5" />
                         <span>{count}</span>
                       </button>
-                    </td>
+                    </div>
 
-                    {/* Ações */}
-                    <td className="py-3.5 px-4 sm:px-6 text-right whitespace-nowrap">
-                      <div className="flex items-center justify-end gap-1">
-                        <button
-                          onClick={() => openEditModal(client)}
-                          className="p-1.5 rounded-lg text-slate-600 hover:text-[#0a1e42] hover:bg-slate-100 transition-colors cursor-pointer"
-                          title="Editar cliente"
-                        >
-                          <Edit className="w-4 h-4" />
-                        </button>
-                        <button
-                          onClick={() => onDeleteClient(client.id)}
-                          className="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer"
-                          title="Eliminar cliente"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                );
-              })}
+                    <div className="mt-3 pt-3 border-t border-slate-100 space-y-1.5">
+                      {client.phone && (
+                        <div className="flex items-center gap-2 text-[11px] text-slate-600">
+                          <Phone className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                          <span>{client.phone}</span>
+                        </div>
+                      )}
+                      {client.email && (
+                        <div className="flex items-center gap-2 text-[11px] text-slate-600 truncate">
+                          <Mail className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                          <span className="truncate">{client.email}</span>
+                        </div>
+                      )}
+                      {client.address && (
+                        <div className="flex items-center gap-2 text-[11px] text-slate-500">
+                          <MapPin className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                          <span className="truncate">
+                            {client.address}, {client.city}
+                          </span>
+                        </div>
+                      )}
+                    </div>
 
-              {filteredClients.length === 0 && (
-                <tr>
-                  <td
-                    colSpan={6}
-                    className="py-12 text-center text-slate-400 text-sm"
-                  >
-                    Nenhum cliente encontrado. Clique em "+ Novo Cliente" para adicionar.
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
-      </div>
+                    <div className="mt-3 flex items-center justify-between rounded-lg bg-slate-50 px-3 py-2">
+                      <span className="text-[10px] uppercase text-slate-400 font-semibold">
+                        Total faturado
+                      </span>
+                      <span className="font-bold text-[#0a1e42] text-sm">
+                        {formatKz(total)}
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 divide-x divide-slate-100 border-t border-slate-100 bg-slate-50/50">
+                    <button
+                      onClick={() => openEditModal(client)}
+                      className="py-2.5 text-[11px] font-bold text-slate-700 hover:bg-slate-100 transition-colors flex items-center justify-center gap-1 cursor-pointer"
+                    >
+                      <Edit className="w-3.5 h-3.5" /> Editar
+                    </button>
+                    <button
+                      onClick={() => onDeleteClient(client.id)}
+                      className="py-2.5 text-[11px] font-bold text-rose-600 hover:bg-rose-50 transition-colors flex items-center justify-center gap-1 cursor-pointer"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" /> Eliminar
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </>
+      )}
 
       {/* Modal Adicionar / Editar Cliente */}
       {isModalOpen && (

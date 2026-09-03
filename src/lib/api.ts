@@ -392,7 +392,7 @@ export function percentToErpVat(pct: number): ErpVatRate {
 }
 
 export function mapErpSale(s: ErpSale): Invoice {
-  const items: InvoiceItem[] = s.items.map((it) => ({
+  const items: InvoiceItem[] = (s.items || []).map((it) => ({
     id: it.id,
     description: it.description,
     specification: '',
@@ -535,7 +535,25 @@ export async function deactivateProduct(productId: string): Promise<void> {
 export async function listSales(page = 1, pageSize = 100): Promise<ErpSale[]> {
   const params = new URLSearchParams({ page: String(page), page_size: String(pageSize) });
   const data = await request<Page<ErpSale>>(`/api/v1/sales?${params.toString()}`);
-  return data.items || [];
+  const firstPageItems = data.items || [];
+
+  // O ERP pagina os resultados. Sem carregar as páginas seguintes, faturas
+  // mais antigas desaparecem e a lista parece incompleta/corrompida.
+  const remainingPages = Math.max(0, (data.pages || 1) - page);
+  if (!remainingPages) return firstPageItems;
+
+  const pages = await Promise.all(
+    Array.from({ length: remainingPages }, (_, index) => {
+      const nextPage = page + index + 1;
+      const nextParams = new URLSearchParams({
+        page: String(nextPage),
+        page_size: String(pageSize),
+      });
+      return request<Page<ErpSale>>(`/api/v1/sales?${nextParams.toString()}`);
+    })
+  );
+
+  return firstPageItems.concat(...pages.map((result) => result.items || []));
 }
 
 export async function getSale(saleId: string): Promise<ErpSale> {
@@ -618,6 +636,8 @@ export function mapCompanyFromUser(user: UserRead | null, fallback: CompanyInfo)
 /** Convert an ERP "YYYY-MM-DD" (or ISO) string to the app's "DD/MM/YYYY" format. */
 export function toAppDate(value?: string): string {
   if (!value) return '';
+  const dateOnly = value.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (dateOnly) return `${dateOnly[3]}/${dateOnly[2]}/${dateOnly[1]}`;
   const d = new Date(value);
   if (isNaN(d.getTime())) return value;
   const day = String(d.getDate()).padStart(2, '0');

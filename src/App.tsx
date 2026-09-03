@@ -78,6 +78,7 @@ export default function App() {
   // 1. Estado de autenticação a partir do token guardado no ERP
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(() => hasAuthToken());
   const [loadingData, setLoadingData] = useState(false);
+  const [dataLoadError, setDataLoadError] = useState<string | null>(null);
 
   // 2. Estado do Menu Mobile
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -105,6 +106,7 @@ export default function App() {
   // Carregar todos os dados do ERP após autenticação
   const loadAll = useCallback(async () => {
     setLoadingData(true);
+    setDataLoadError(null);
     try {
       const user = getUser();
       const [cl, pr, sl] = await Promise.all([listClients(), listProducts(), listSales()]);
@@ -114,6 +116,11 @@ export default function App() {
       setCompanyInfo((prev) => mapCompanyFromUser(user, prev));
     } catch (err) {
       console.error('Falha ao carregar dados do ERP', err);
+      setDataLoadError(
+        err instanceof Error
+          ? err.message
+          : 'Não foi possível ligar ao ERP.'
+      );
     } finally {
       setLoadingData(false);
     }
@@ -455,6 +462,29 @@ export default function App() {
         />
 
         <main className="flex-1 p-4 sm:p-6 lg:p-8 max-w-7xl w-full mx-auto">
+          {dataLoadError && (
+            <div
+              role="alert"
+              className="mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-800"
+            >
+              <span>Não foi possível carregar os dados do ERP: {dataLoadError}</span>
+              <button
+                type="button"
+                onClick={loadAll}
+                disabled={loadingData}
+                className="shrink-0 rounded-lg bg-rose-700 px-3 py-1.5 text-xs font-bold text-white hover:bg-rose-800 disabled:opacity-60"
+              >
+                Tentar novamente
+              </button>
+            </div>
+          )}
+
+          {loadingData && invoices.length === 0 ? (
+            <div className="mb-6 rounded-2xl border border-blue-100 bg-blue-50 px-4 py-3 text-sm font-medium text-[#0a1e42]">
+              A carregar faturas, clientes e produtos…
+            </div>
+          ) : null}
+
           {/* CASO 1: Documento Visualizado em Formato A4 Profissional */}
           {selectedInvoiceForA4 ? (
             <InvoiceA4View

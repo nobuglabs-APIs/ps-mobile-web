@@ -8,6 +8,21 @@ const RENDER_SCALE = 2;
 
 const MM_PER_PX = 210 / A4_WIDTH_PX;
 
+async function waitForAssets(element: HTMLElement): Promise<void> {
+  const fonts = document.fonts;
+  if (fonts) await fonts.ready;
+
+  await Promise.all(
+    Array.from(element.querySelectorAll('img')).map((image) => {
+      if (image.complete) return Promise.resolve();
+      return new Promise<void>((resolve) => {
+        image.addEventListener('load', () => resolve(), { once: true });
+        image.addEventListener('error', () => resolve(), { once: true });
+      });
+    })
+  );
+}
+
 /**
  * Renderiza o documento A4 num canvas (com html2canvas-pro, que suporta as
  * cores oklch/oklab do Tailwind v4) e descarrega um PDF A4 paginado
@@ -18,6 +33,7 @@ export async function downloadInvoicePdf(
   filename: string
 ): Promise<void> {
   const clone = source.cloneNode(true) as HTMLElement;
+  clone.removeAttribute('id');
   clone.style.position = 'absolute';
   clone.style.left = '-99999px';
   clone.style.top = '0';
@@ -28,13 +44,17 @@ export async function downloadInvoicePdf(
   clone.style.boxShadow = 'none';
   clone.style.border = 'none';
   clone.style.zIndex = '-1';
+  clone.style.overflow = 'visible';
   document.body.appendChild(clone);
 
   try {
+    await waitForAssets(clone);
     const canvas = await html2canvas(clone, {
       scale: RENDER_SCALE,
       useCORS: true,
-      allowTaint: true,
+      // Uma imagem remota sem CORS não pode tornar o canvas "tainted", caso
+      // contrário toDataURL falha e o PDF fica corrompido/não é gerado.
+      allowTaint: false,
       backgroundColor: '#ffffff',
       windowWidth: A4_WIDTH_PX,
       logging: false,
@@ -85,7 +105,7 @@ export async function downloadInvoicePdf(
 
     doc.save(filename);
   } finally {
-    document.body.removeChild(clone);
+    clone.remove();
   }
 }
 
