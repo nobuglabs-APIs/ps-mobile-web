@@ -9,17 +9,20 @@ import type {
 } from '../types';
 
 /**
- * Base URL of the Nobug Labs ERP.
+ * Base URL do ERP da Nobug Labs.
  *
- * - Local development: points directly at the ERP (browser → ERP).
- * - Production (Vercel): the app is served over HTTPS and calls the ERP through a
- *   serverless proxy (`api/[...path].js`) on the same origin to avoid mixed-content
- *   blocking and CORS issues. Set VITE_ERP_BASE_URL to override in either case.
+ * - Produção (Vercel/HTTPS): a app chama SEMPRE o mesmo-origin `/api/*`, que o
+ *   `vercel.json` faz proxy para o ERP. Isto evita mixed content e CORS, e
+ *   ignora qualquer VITE_ERP_BASE_URL que apenas serviria para apontar
+ *   diretamente para o IP (o que falha em HTTPS).
+ * - Desenvolvimento local: liga diretamente ao ERP (via env ou default).
  */
-const CONFIGURED_ERP_URL = (import.meta.env.VITE_ERP_BASE_URL || '').replace(/\/+$/, '');
+export const ERP_DEV_BASE_URL = (
+  import.meta.env.VITE_ERP_BASE_URL || 'http://3.92.235.72'
+).replace(/\/+$/, '');
 
-export const ERP_BASE_URL = CONFIGURED_ERP_URL || (import.meta.env.PROD ? '' : 'http://3.92.235.72');
-export const ERP_VIA_PROXY = !CONFIGURED_ERP_URL && import.meta.env.PROD;
+export const ERP_BASE_URL = import.meta.env.PROD ? '' : ERP_DEV_BASE_URL;
+export const ERP_VIA_PROXY = import.meta.env.PROD;
 
 const TOKEN_KEY = 'ps_faturas_erp_token';
 const USER_KEY = 'ps_faturas_erp_user';
