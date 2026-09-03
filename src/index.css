@@ -58,6 +58,22 @@
     border: none !important;
   }
 
+  /* No ecrã, a folha A4 é reduzida com transform:scale num wrapper. Na
+     impressão é preciso anular essa escala e o dimensionamento do wrapper,
+     senão o documento sai encolhido/recortado. */
+  .pdf-scale-wrap {
+    width: auto !important;
+    height: auto !important;
+    overflow: visible !important;
+    transform: none !important;
+  }
+
+  #printable-invoice {
+    width: 100% !important;
+    transform: none !important;
+    transform-origin: initial !important;
+  }
+
   /* Evita que blocos estruturais (caixas, tabela, assinaturas, rodapé) sejam
      cortados ao meio quando o documento passa de uma página. */
   .print-container tr,

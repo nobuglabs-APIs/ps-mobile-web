@@ -45,6 +45,8 @@ export async function downloadInvoicePdf(
   clone.style.border = 'none';
   clone.style.zIndex = '-1';
   clone.style.overflow = 'visible';
+  clone.style.transform = 'none';
+  clone.style.transformOrigin = 'top left';
   document.body.appendChild(clone);
 
   try {
@@ -64,7 +66,13 @@ export async function downloadInvoicePdf(
     const canvasHeight = canvas.height;
     const pageSlicePx = A4_HEIGHT_PX * RENDER_SCALE; // altura de uma página A4 no canvas
 
-    const pageCount = Math.max(1, Math.ceil(canvasHeight / pageSlicePx));
+    const naturalPageCount = Math.max(1, Math.ceil(canvasHeight / pageSlicePx));
+
+    // Se a fatura exceder LIGEIRAMENTE uma página (até ~35% extra), em vez de
+    // cortar numa "segunda folha" com poucas linhas, encolhe-se o documento
+    // para caber inteiro numa só folha A4.
+    const fitOnePage = naturalPageCount === 2 && canvasHeight < pageSlicePx * 1.35;
+    const pageCount = fitOnePage ? 1 : naturalPageCount;
 
     const doc = new jsPDF({
       orientation: 'portrait',
@@ -76,31 +84,50 @@ export async function downloadInvoicePdf(
     for (let i = 0; i < pageCount; i++) {
       if (i > 0) doc.addPage();
 
-      const sliceY = i * pageSlicePx;
-      const remaining = Math.min(pageSlicePx, canvasHeight - sliceY);
-      if (remaining <= 0) break;
+      if (!fitOnePage) {
+        const sliceY = i * pageSlicePx;
+        const remaining = Math.min(pageSlicePx, canvasHeight - sliceY);
+        if (remaining <= 0) break;
 
-      const pageCanvas = document.createElement('canvas');
-      pageCanvas.width = canvasWidth;
-      pageCanvas.height = remaining;
-      const ctx = pageCanvas.getContext('2d');
-      if (ctx) {
-        ctx.fillStyle = '#ffffff';
-        ctx.fillRect(0, 0, canvasWidth, remaining);
-        ctx.drawImage(canvas, 0, sliceY, canvasWidth, remaining, 0, 0, canvasWidth, remaining);
+        const pageCanvas = document.createElement('canvas');
+        pageCanvas.width = canvasWidth;
+        pageCanvas.height = remaining;
+        const ctx = pageCanvas.getContext('2d');
+        if (ctx) {
+          ctx.fillStyle = '#ffffff';
+          ctx.fillRect(0, 0, canvasWidth, remaining);
+          ctx.drawImage(canvas, 0, sliceY, canvasWidth, remaining, 0, 0, canvasWidth, remaining);
+        }
+
+        const imageHeightMm = (remaining / RENDER_SCALE) * MM_PER_PX;
+        doc.addImage(
+          pageCanvas.toDataURL('image/png'),
+          'PNG',
+          0,
+          0,
+          A4_WIDTH_PX * MM_PER_PX,
+          imageHeightMm,
+          undefined,
+          'FAST'
+        );
+      } else {
+        // Documento completo numa só folha, centrado e com escala proporcional.
+        const imageHeightMm = (canvasHeight / RENDER_SCALE) * MM_PER_PX;
+        const fitScale = A4_HEIGHT_PX * MM_PER_PX / imageHeightMm;
+        const drawW = A4_WIDTH_PX * MM_PER_PX * fitScale;
+        const drawH = imageHeightMm * fitScale;
+        const xMm = Math.max(0, (A4_WIDTH_PX * MM_PER_PX - drawW) / 2);
+        doc.addImage(
+          canvas.toDataURL('image/png'),
+          'PNG',
+          xMm,
+          0,
+          drawW,
+          drawH,
+          undefined,
+          'FAST'
+        );
       }
-
-      const imageHeightMm = (remaining / RENDER_SCALE) * MM_PER_PX;
-      doc.addImage(
-        pageCanvas.toDataURL('image/png'),
-        'PNG',
-        0,
-        0,
-        A4_WIDTH_PX * MM_PER_PX,
-        imageHeightMm,
-        undefined,
-        'FAST'
-      );
     }
 
     doc.save(filename);

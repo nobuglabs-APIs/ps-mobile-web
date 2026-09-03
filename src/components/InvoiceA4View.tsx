@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   Printer,
   FileDown,
@@ -50,6 +50,34 @@ export const InvoiceA4View: React.FC<InvoiceA4ViewProps> = ({
   const [copiedShare, setCopiedShare] = useState(false);
   const [showShareModal, setShowShareModal] = useState(false);
   const [generatingPdf, setGeneratingPdf] = useState(false);
+
+  // Escala responsiva: no ecrã, a folha A4 é desenhada a 794px e reduzida
+  // proporcionalmente em ecrãs pequenos para não distorcer o layout.
+  const wrapRef = useRef<HTMLDivElement | null>(null);
+  const sheetRef = useRef<HTMLDivElement | null>(null);
+  const [scale, setScale] = useState(1);
+  const [contentH, setContentH] = useState(0);
+
+  useEffect(() => {
+    const update = () => {
+      if (!wrapRef.current) return;
+      const avail = wrapRef.current.clientWidth;
+      setScale(Math.min(1, avail / 794));
+    };
+    update();
+    window.addEventListener('resize', update);
+    return () => window.removeEventListener('resize', update);
+  }, []);
+
+  useEffect(() => {
+    const node = sheetRef.current;
+    if (!node) return;
+    const measure = () => setContentH(node.scrollHeight);
+    measure();
+    const ro = new ResizeObserver(measure);
+    ro.observe(node);
+    return () => ro.disconnect();
+  }, [invoice]);
 
   const handlePrint = () => {
     window.print();
@@ -152,9 +180,9 @@ export const InvoiceA4View: React.FC<InvoiceA4ViewProps> = ({
   return (
     <div className="space-y-6 pb-12">
       {/* Top Action Bar (hidden when printing) */}
-      <div className="no-print bg-white rounded-2xl p-4 sm:p-5 border border-slate-200/90 shadow-2xs flex flex-wrap items-center justify-between gap-4">
+      <div className="no-print bg-white rounded-2xl p-3 sm:p-5 border border-slate-200/90 shadow-2xs flex flex-col sm:flex-row sm:flex-wrap sm:items-center justify-between gap-3 sm:gap-4">
         {/* Esquerda: Voltar e Identificador */}
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-2 sm:gap-3 w-full sm:w-auto">
           <button
             onClick={onBack}
             className="inline-flex items-center gap-2 text-slate-600 hover:text-[#0a1e42] font-semibold text-xs sm:text-sm px-3 py-2 rounded-xl hover:bg-slate-100 transition-colors cursor-pointer"
@@ -188,7 +216,7 @@ export const InvoiceA4View: React.FC<InvoiceA4ViewProps> = ({
         </div>
 
         {/* Direita: AÇÕES: [ Editar ] [ Imprimir ] [ Gerar PDF ] [ Nova Fatura ] */}
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="flex flex-col sm:flex-row sm:flex-wrap items-stretch sm:items-center gap-2 w-full sm:w-auto">
           {onToggleStatus && (
             <button
               onClick={() =>
@@ -197,7 +225,7 @@ export const InvoiceA4View: React.FC<InvoiceA4ViewProps> = ({
                   invoice.status === 'Paga' ? 'Pendente' : 'Paga'
                 )
               }
-              className={`inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold transition-colors cursor-pointer ${
+              className={`inline-flex w-full sm:w-auto items-center justify-center gap-1.5 px-3 py-2.5 sm:py-2 rounded-xl text-xs font-bold transition-colors cursor-pointer ${
                 invoice.status === 'Paga'
                   ? 'bg-amber-50 hover:bg-amber-100 text-amber-700 border border-amber-200'
                   : 'bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200'
@@ -219,7 +247,7 @@ export const InvoiceA4View: React.FC<InvoiceA4ViewProps> = ({
 
           <button
             onClick={() => onEdit(invoice)}
-            className="inline-flex items-center gap-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 px-3.5 py-2 rounded-xl text-xs font-bold transition-colors cursor-pointer"
+            className="inline-flex w-full sm:w-auto items-center justify-center gap-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 px-3.5 py-2.5 sm:py-2 rounded-xl text-xs font-bold transition-colors cursor-pointer"
           >
             <Edit className="w-3.5 h-3.5 text-slate-600" />
             <span>Editar</span>
@@ -227,7 +255,7 @@ export const InvoiceA4View: React.FC<InvoiceA4ViewProps> = ({
 
           <button
             onClick={handlePrint}
-            className="inline-flex items-center gap-1.5 bg-slate-100 hover:bg-slate-200 text-slate-800 px-3.5 py-2 rounded-xl text-xs font-bold transition-colors cursor-pointer"
+            className="inline-flex w-full sm:w-auto items-center justify-center gap-1.5 bg-slate-100 hover:bg-slate-200 text-slate-800 px-3.5 py-2.5 sm:py-2 rounded-xl text-xs font-bold transition-colors cursor-pointer"
           >
             <Printer className="w-3.5 h-3.5 text-slate-600" />
             <span>Imprimir</span>
@@ -236,7 +264,7 @@ export const InvoiceA4View: React.FC<InvoiceA4ViewProps> = ({
           <button
             onClick={handleDownloadPdf}
             disabled={generatingPdf}
-            className="inline-flex items-center gap-1.5 bg-[#0056d6] hover:bg-[#0047b3] text-white px-4 py-2 rounded-xl text-xs font-bold shadow-xs hover:shadow transition-all cursor-pointer disabled:opacity-60 disabled:cursor-wait"
+            className="inline-flex w-full sm:w-auto items-center justify-center gap-1.5 bg-[#0056d6] hover:bg-[#0047b3] text-white px-4 py-2.5 sm:py-2 rounded-xl text-xs font-bold shadow-xs hover:shadow transition-all cursor-pointer disabled:opacity-60 disabled:cursor-wait"
             title="Descarregar o documento em PDF"
           >
             {generatingPdf ? (
@@ -254,7 +282,7 @@ export const InvoiceA4View: React.FC<InvoiceA4ViewProps> = ({
 
           <button
             onClick={onNewInvoice}
-            className="inline-flex items-center gap-1.5 bg-[#0a1e42] hover:bg-[#132d5e] text-white px-3.5 py-2 rounded-xl text-xs font-bold shadow-xs transition-colors cursor-pointer"
+            className="inline-flex w-full sm:w-auto items-center justify-center gap-1.5 bg-[#0a1e42] hover:bg-[#132d5e] text-white px-3.5 py-2.5 sm:py-2 rounded-xl text-xs font-bold shadow-xs transition-colors cursor-pointer"
           >
             <PlusCircle className="w-3.5 h-3.5 text-amber-400" />
             <span>Nova Fatura</span>
@@ -265,9 +293,24 @@ export const InvoiceA4View: React.FC<InvoiceA4ViewProps> = ({
       {/* A4 Sheet Container */}
       <div className="flex justify-center">
         <div
-          id="printable-invoice"
-          className="print-container w-[794px] max-w-full bg-white rounded-2xl sm:rounded-3xl shadow-md border border-slate-200/90 text-slate-800 print:shadow-none print:border-none print:p-0 print:m-0 overflow-hidden"
+          ref={wrapRef}
+          className="pdf-scale-wrap w-full max-w-[794px]"
+          style={{
+            width: 794 * scale,
+            height: contentH * scale,
+            overflow: scale < 1 ? 'hidden' : 'visible',
+          }}
         >
+          <div
+            ref={sheetRef}
+            id="printable-invoice"
+            className="print-container w-[794px] bg-white rounded-2xl sm:rounded-3xl shadow-md border border-slate-200/90 text-slate-800 print:shadow-none print:border-none print:p-0 print:m-0"
+            style={{
+              width: 794,
+              transform: `scale(${scale})`,
+              transformOrigin: 'top left',
+            }}
+          >
           {/* Top Padding */}
           <div className="p-6 sm:p-8 space-y-4">
             {/* 1. Header Oficial PS */}
@@ -1017,9 +1060,10 @@ export const InvoiceA4View: React.FC<InvoiceA4ViewProps> = ({
                   </span>
                 </div>
               </div>
-            </div>
+          </div>
           </div>
         </div>
+      </div>
       </div>
     </div>
   );
