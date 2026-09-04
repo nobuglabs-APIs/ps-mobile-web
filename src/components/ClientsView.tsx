@@ -12,6 +12,7 @@ import {
   FileText,
   X,
   Check,
+  ChevronRight,
 } from 'lucide-react';
 import { Client, Invoice } from '../types';
 import { formatKz } from '../utils/formatters';
@@ -130,43 +131,43 @@ export const ClientsView: React.FC<ClientsViewProps> = ({
   return (
     <div className="space-y-6 pb-12">
       {/* Topo: Título + Botão Novo Cliente */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div className="flex items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-extrabold text-[#0a1e42] tracking-tight">
+          <h1 className="text-lg lg:text-2xl font-extrabold text-[#0a1e42] tracking-tight">
             Clientes
           </h1>
-          <p className="text-xs sm:text-sm text-slate-500 mt-0.5">
+          <p className="text-[11px] lg:text-sm text-slate-500 mt-0.5 hidden lg:block">
             Cadastro e histórico de clientes para seleção automática em faturas
           </p>
         </div>
 
-        <button
-          type="button"
-          onClick={openNewModal}
-          className="px-5 py-2.5 rounded-xl bg-[#0056d6] hover:bg-[#004dc0] active:bg-[#003ca0] text-white text-sm font-bold border border-blue-400/25 transition-all duration-150 active:scale-[0.98] flex items-center justify-center gap-2 cursor-pointer shrink-0 select-none"
-        >
-          <Plus className="w-4 h-4 stroke-[2.5]" />
-          <span>Novo Cliente</span>
-        </button>
+          <button
+            type="button"
+            onClick={openNewModal}
+            className="px-4 lg:px-5 py-2 lg:py-2.5 rounded-xl bg-[#0056d6] hover:bg-[#004dc0] active:bg-[#003ca0] text-white text-xs lg:text-sm font-bold border border-blue-400/25 transition-all duration-150 active:scale-[0.98] flex items-center justify-center gap-2 cursor-pointer shrink-0 select-none"
+          >
+            <Plus className="w-4 h-4 stroke-[2.5]" />
+            <span className="lg:inline">Novo</span>
+          </button>
       </div>
 
       {/* Barra de Pesquisa */}
-      <div className="bg-white p-4 rounded-2xl border border-slate-200/90 shadow-xs">
+      <div className="bg-white lg:p-4 lg:rounded-2xl lg:border lg:border-slate-200/90">
         <div className="relative">
           <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
           <input
             type="text"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            placeholder="Pesquisar por nome, NIF, telefone ou email do cliente..."
-            className="w-full pl-10 pr-4 py-2.5 text-sm rounded-xl border border-slate-200 focus:outline-none focus:border-[#0056d6] focus:ring-2 focus:ring-[#0056d6]/15 bg-slate-50/70 transition-all placeholder:text-slate-400"
+            placeholder="Pesquisar..."
+            className="w-full pl-10 pr-4 py-2.5 text-sm rounded-xl lg:border border-slate-200 focus:outline-none focus:border-[#0056d6] focus:ring-2 focus:ring-[#0056d6]/15 bg-slate-50/70 transition-all placeholder:text-slate-400"
           />
         </div>
       </div>
 
       {/* Lista de Clientes */}
       {filteredClients.length === 0 ? (
-        <div className="bg-white rounded-3xl border border-slate-200/90 shadow-xs px-6 py-16 text-center">
+        <div className="bg-white lg:rounded-3xl lg:border lg:border-slate-200/90 lg:shadow-xs px-6 py-16 text-center">
           <div className="w-16 h-16 rounded-2xl bg-slate-100 text-slate-400 flex items-center justify-center mx-auto">
             <Users className="w-8 h-8" />
           </div>
@@ -310,91 +311,30 @@ export const ClientsView: React.FC<ClientsViewProps> = ({
             </div>
           </div>
 
-          {/* Cartões de Cliente — Mobile / Tablet */}
-          <div className="lg:hidden space-y-3">
-            {filteredClients.map((client) => {
+          {/* Mobile / Tablet: flat list */}
+          <div className="lg:hidden">
+            {filteredClients.map((client, idx) => {
               const count = getClientInvoicesCount(client.name);
               const total = getClientTotalInvoiced(client.name);
               return (
-                <div
-                  key={client.id}
-                  className="bg-white rounded-2xl border border-slate-200/90 shadow-xs overflow-hidden"
-                >
-                  <div className="p-4">
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="flex items-center gap-3 min-w-0">
-                        <div className="w-11 h-11 shrink-0 rounded-full bg-[#0a1e42]/5 border border-slate-200 flex items-center justify-center">
-                          <Building className="w-5 h-5 text-[#0056d6]" />
-                        </div>
-                        <div className="min-w-0">
-                          <div className="font-extrabold text-[#0a1e42] text-sm truncate">
-                            {client.name}
-                          </div>
-                          <div className="text-[11px] text-slate-400 truncate">
-                            {client.nif || 'Consumidor Final'}
-                          </div>
-                        </div>
+                <div key={client.id} className={`bg-white ${idx < filteredClients.length - 1 ? 'border-b border-slate-100' : ''}`}>
+                  <div className="flex items-center gap-3 px-4 py-3">
+                    <div className="w-10 h-10 shrink-0 rounded-full bg-[#0a1e42]/5 flex items-center justify-center">
+                      <Building className="w-4 h-4 text-[#0056d6]" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="font-bold text-sm text-[#0a1e42] truncate">{client.name}</span>
+                        {count > 0 && (
+                          <span className="text-[10px] font-bold text-[#0056d6] bg-blue-50 px-1.5 py-0.5 rounded-full shrink-0">{count} faturas</span>
+                        )}
                       </div>
-                      <button
-                        onClick={() => onViewClientInvoices(client.name)}
-                        className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold shrink-0 cursor-pointer ${
-                          count > 0
-                            ? 'bg-blue-50 text-[#0056d6]'
-                            : 'bg-slate-100 text-slate-500'
-                        }`}
-                        title="Ver faturas deste cliente"
-                      >
-                        <FileText className="w-3.5 h-3.5" />
-                        <span>{count}</span>
-                      </button>
+                      <div className="flex items-center justify-between gap-2 mt-0.5">
+                        <span className="text-xs text-slate-500 truncate">{client.nif || 'Consumidor Final'}{client.phone ? ` · ${client.phone}` : ''}</span>
+                        <span className="text-xs text-slate-400 whitespace-nowrap">{formatKz(total)}</span>
+                      </div>
                     </div>
-
-                    <div className="mt-3 pt-3 border-t border-slate-100 space-y-1.5">
-                      {client.phone && (
-                        <div className="flex items-center gap-2 text-[11px] text-slate-600">
-                          <Phone className="w-3.5 h-3.5 text-slate-400 shrink-0" />
-                          <span>{client.phone}</span>
-                        </div>
-                      )}
-                      {client.email && (
-                        <div className="flex items-center gap-2 text-[11px] text-slate-600 truncate">
-                          <Mail className="w-3.5 h-3.5 text-slate-400 shrink-0" />
-                          <span className="truncate">{client.email}</span>
-                        </div>
-                      )}
-                      {client.address && (
-                        <div className="flex items-center gap-2 text-[11px] text-slate-500">
-                          <MapPin className="w-3.5 h-3.5 text-slate-400 shrink-0" />
-                          <span className="truncate">
-                            {client.address}, {client.city}
-                          </span>
-                        </div>
-                      )}
-                    </div>
-
-                    <div className="mt-3 flex items-center justify-between rounded-lg bg-slate-50 px-3 py-2">
-                      <span className="text-[10px] uppercase text-slate-400 font-semibold">
-                        Total faturado
-                      </span>
-                      <span className="font-bold text-[#0a1e42] text-sm">
-                        {formatKz(total)}
-                      </span>
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-2 divide-x divide-slate-100 border-t border-slate-100 bg-slate-50/50">
-                    <button
-                      onClick={() => openEditModal(client)}
-                      className="py-2.5 text-[11px] font-bold text-slate-700 hover:bg-slate-100 transition-colors flex items-center justify-center gap-1 cursor-pointer"
-                    >
-                      <Edit className="w-3.5 h-3.5" /> Editar
-                    </button>
-                    <button
-                      onClick={() => onDeleteClient(client.id)}
-                      className="py-2.5 text-[11px] font-bold text-rose-600 hover:bg-rose-50 transition-colors flex items-center justify-center gap-1 cursor-pointer"
-                    >
-                      <Trash2 className="w-3.5 h-3.5" /> Eliminar
-                    </button>
+                    <ChevronRight className="w-4 h-4 text-slate-300 shrink-0" />
                   </div>
                 </div>
               );
