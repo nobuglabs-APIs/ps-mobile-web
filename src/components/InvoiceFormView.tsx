@@ -49,6 +49,7 @@ interface InvoiceFormViewProps {
   editingInvoice?: Invoice | null;
   clients?: Client[];
   products?: ProductService[];
+  defaultDocType?: DocumentType;
   getNextDocNumber: (type: DocumentType) => string;
   onGenerateInvoice: (invoice: Invoice) => void;
   onSaveDraft: (invoice: Invoice) => void;
@@ -114,6 +115,7 @@ export const InvoiceFormView: React.FC<InvoiceFormViewProps> = ({
   editingInvoice,
   clients = [],
   products = [],
+  defaultDocType,
   getNextDocNumber,
   onGenerateInvoice,
   onSaveDraft,
@@ -123,7 +125,7 @@ export const InvoiceFormView: React.FC<InvoiceFormViewProps> = ({
 }) => {
   // Tipo de Documento Selecionado
   const [docType, setDocType] = useState<DocumentType>(
-    editingInvoice?.docType || 'factura'
+    editingInvoice?.docType || defaultDocType || 'factura'
   );
 
   // SEÇÃO 1: Dados da fatura / documento
@@ -497,8 +499,27 @@ export const InvoiceFormView: React.FC<InvoiceFormViewProps> = ({
         </div>
       )}
 
-      {/* SELETOR PRINCIPAL DO TIPO DE DOCUMENTO (5 Modelos Comerciais e Fiscais de Angola) */}
-      <div className="bg-white rounded-2xl p-5 sm:p-6 border border-slate-200/90 shadow-2xs space-y-4">
+      {/* Mobile: Barra compacta do tipo de documento já escolhido (no bottom sheet/quick flow) */}
+      <div className="lg:hidden bg-white rounded-2xl px-4 py-3 border border-slate-200/90 shadow-2xs flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <span className="w-7 h-7 rounded-lg bg-[#0a1e42] text-[#d49419] flex items-center justify-center text-xs font-black">
+            {DOC_TYPE_CONFIGS.find((c) => c.id === docType)?.code || 'FT'}
+          </span>
+          <div>
+            <span className="text-[10px] text-slate-400 uppercase font-bold block">Documento</span>
+            <span className="text-sm font-black text-[#0a1e42] leading-tight">
+              {getDocTypeLabel(docType)}
+            </span>
+          </div>
+        </div>
+        <div className="text-right">
+          <span className="text-[10px] text-slate-400 uppercase font-bold block">N.º</span>
+          <span className="text-sm font-black text-[#e11d48] font-mono">{number || 'Auto'}</span>
+        </div>
+      </div>
+
+      {/* SELETOR PRINCIPAL DO TIPO DE DOCUMENTO (desktop only — mobile usa o bottom sheet) */}
+      <div className="hidden lg:block bg-white rounded-2xl p-5 sm:p-6 border border-slate-200/90 shadow-2xs space-y-4">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3 border-b border-slate-100">
           <div>
             <div className="flex items-center gap-2">
@@ -812,7 +833,7 @@ export const InvoiceFormView: React.FC<InvoiceFormViewProps> = ({
 
           <div className="flex items-center gap-2 w-full sm:w-auto">
             {clients.length > 0 && (
-              <div className="relative flex-1 sm:w-64">
+              <div className="relative flex-1 sm:w-64 min-w-0">
                 <Select
                   value=""
                   onChange={(v) => handleSelectClient(v)}
@@ -831,7 +852,7 @@ export const InvoiceFormView: React.FC<InvoiceFormViewProps> = ({
             <button
               type="button"
               onClick={() => setIsQuickClientOpen(true)}
-              className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-[#0a1e42] hover:bg-[#07152e] active:bg-[#050e1f] text-white font-bold text-xs transition-all duration-150 cursor-pointer whitespace-nowrap active:scale-[0.98] select-none border border-[#0a1e42]"
+              className="inline-flex items-center justify-center gap-1.5 h-10 px-3.5 shrink-0 rounded-xl bg-[#0a1e42] hover:bg-[#07152e] active:bg-[#050e1f] text-white font-bold text-xs transition-all duration-150 cursor-pointer active:scale-[0.98] select-none border border-[#0a1e42]"
             >
               <Plus className="w-3.5 h-3.5 text-[#d49419]" />
               <span>Novo Cliente</span>

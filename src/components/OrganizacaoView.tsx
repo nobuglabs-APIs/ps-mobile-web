@@ -229,21 +229,21 @@ export const OrganizacaoView: React.FC = () => {
   return (
     <div className="space-y-6 pb-12">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div className="flex items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-extrabold text-[#0a1e42] tracking-tight">Organização</h1>
-          <p className="text-xs sm:text-sm text-slate-500 mt-0.5">
+          <h1 className="text-lg lg:text-2xl font-extrabold text-[#0a1e42] tracking-tight">Organização</h1>
+          <p className="text-[11px] lg:text-sm text-slate-500 mt-0.5 hidden lg:block">
             Gestão de empresas, filiais e dados fiscais do ERP
           </p>
         </div>
-        <button
-          type="button"
-          onClick={openNewModal}
-          className="px-5 py-2.5 rounded-xl bg-[#0056d6] hover:bg-[#004dc0] active:bg-[#003ca0] text-white text-sm font-bold border border-blue-400/25 transition-all duration-150 active:scale-[0.98] flex items-center justify-center gap-2 cursor-pointer shrink-0 select-none"
-        >
-          <Plus className="w-4 h-4 stroke-[2.5]" />
-          <span>Nova Organização</span>
-        </button>
+          <button
+            type="button"
+            onClick={openNewModal}
+            className="px-4 lg:px-5 py-2 lg:py-2.5 rounded-xl bg-[#0056d6] hover:bg-[#004dc0] active:bg-[#003ca0] text-white text-xs lg:text-sm font-bold border border-blue-400/25 transition-all duration-150 active:scale-[0.98] flex items-center justify-center gap-2 cursor-pointer shrink-0 select-none"
+          >
+            <Plus className="w-4 h-4 stroke-[2.5]" />
+            <span className="lg:inline">Nova</span>
+          </button>
       </div>
 
       {/* Success */}
@@ -255,15 +255,15 @@ export const OrganizacaoView: React.FC = () => {
       )}
 
       {/* Search */}
-      <div className="bg-white p-4 rounded-2xl border border-slate-200/90 shadow-xs">
+      <div className="bg-white lg:p-4 lg:rounded-2xl lg:border lg:border-slate-200/90">
         <div className="relative">
           <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
           <input
             type="text"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            placeholder="Pesquisar por nome, NIF, nome comercial ou email..."
-            className="w-full pl-10 pr-4 py-2.5 text-sm rounded-xl border border-slate-200 focus:outline-none focus:border-[#0056d6] focus:ring-2 focus:ring-[#0056d6]/15 bg-slate-50/70 transition-all placeholder:text-slate-400"
+            placeholder="Pesquisar..."
+            className="w-full pl-10 pr-4 py-2.5 text-sm rounded-xl lg:border border-slate-200 focus:outline-none focus:border-[#0056d6] focus:ring-2 focus:ring-[#0056d6]/15 bg-slate-50/70 transition-all placeholder:text-slate-400"
           />
         </div>
       </div>
@@ -443,108 +443,30 @@ export const OrganizacaoView: React.FC = () => {
             </div>
           </div>
 
-          {/* ---------- Cartões Mobile / Tablet ---------- */}
-          <div className="lg:hidden space-y-3">
-            {filteredCompanies.map((company) => (
-              <div
-                key={company.id}
-                className="bg-white rounded-2xl border border-slate-200/90 shadow-xs overflow-hidden"
-              >
-                <div className="p-4">
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="flex items-center gap-3 min-w-0">
-                      <div className="w-11 h-11 shrink-0 rounded-full bg-[#0a1e42]/5 border border-slate-200 flex items-center justify-center">
-                        {company.logo_url ? (
-                          <img src={company.logo_url} alt="" className="w-9 h-9 rounded-lg object-contain" />
-                        ) : (
-                          <Building2 className="w-5 h-5 text-[#0056d6]" />
-                        )}
-                      </div>
-                      <div className="min-w-0">
-                        <div className="font-extrabold text-[#0a1e42] text-sm truncate">
-                          {company.name}
-                        </div>
-                        <div className="text-[11px] text-slate-400 truncate font-mono">
-                          NIF: {company.nif}
-                        </div>
-                      </div>
-                    </div>
-                    <span
-                      className={`text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0 ${
-                        company.active
-                          ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
-                          : 'bg-slate-100 text-slate-500 border border-slate-200'
-                      }`}
-                    >
-                      {company.active ? 'Ativa' : 'Inativa'}
-                    </span>
-                  </div>
-
-                  <div className="mt-3 pt-3 border-t border-slate-100 space-y-1.5">
-                    {company.trading_name && (
-                      <div className="flex items-center gap-2 text-[11px] text-slate-500 italic">
-                        <span>Nome comercial: {company.trading_name}</span>
-                      </div>
-                    )}
-                    {company.phone && (
-                      <div className="flex items-center gap-2 text-[11px] text-slate-600">
-                        <Phone className="w-3.5 h-3.5 text-slate-400 shrink-0" />
-                        <span>{company.phone}</span>
-                      </div>
-                    )}
-                    {company.email && (
-                      <div className="flex items-center gap-2 text-[11px] text-slate-600 truncate">
-                        <Mail className="w-3.5 h-3.5 text-slate-400 shrink-0" />
-                        <span className="truncate">{company.email}</span>
-                      </div>
-                    )}
-                    {company.address && (
-                      <div className="flex items-center gap-2 text-[11px] text-slate-500">
-                        <MapPin className="w-3.5 h-3.5 text-slate-400 shrink-0" />
-                        <span className="truncate">
-                          {company.address}
-                          {company.municipality ? `, ${company.municipality}` : ''}
-                          {company.province ? ` - ${company.province}` : ''}
-                        </span>
-                      </div>
+          {/* ---------- Mobile / Tablet: flat list ---------- */}
+          <div className="lg:hidden">
+            {filteredCompanies.map((company, idx) => (
+              <div key={company.id} className={`bg-white ${idx < filteredCompanies.length - 1 ? 'border-b border-slate-100' : ''}`}>
+                <div className="flex items-center gap-3 px-4 py-3">
+                  <div className="w-10 h-10 shrink-0 rounded-full bg-[#0a1e42]/5 flex items-center justify-center">
+                    {company.logo_url ? (
+                      <img src={company.logo_url} alt="" className="w-8 h-8 rounded-lg object-contain" />
+                    ) : (
+                      <Building2 className="w-4 h-4 text-[#0056d6]" />
                     )}
                   </div>
-
-                  <div className="mt-3 flex items-center gap-2 flex-wrap">
-                    <span className="inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-semibold bg-slate-100 text-slate-600">
-                      {company.tax_regime}
-                    </span>
-                    <span className="inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-mono font-semibold bg-slate-100 text-slate-600">
-                      IVA: {company.vat_rate === 'EX' ? 'Isento' : `${company.vat_rate}%`}
-                    </span>
-                    {company.is_e_invoicing_enabled && (
-                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
-                        <CheckCircle2 className="w-3 h-3" />
-                        e-Factura
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="font-bold text-sm text-[#0a1e42] truncate">{company.name}</span>
+                      <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full shrink-0 ${company.active ? 'bg-emerald-50 text-emerald-700' : 'bg-slate-100 text-slate-500'}`}>
+                        {company.active ? 'Ativa' : 'Inativa'}
                       </span>
-                    )}
+                    </div>
+                    <div className="flex items-center justify-between gap-2 mt-0.5">
+                      <span className="text-xs text-slate-500 truncate font-mono">NIF: {company.nif}{company.phone ? ` · ${company.phone}` : ''}</span>
+                      <span className="text-[10px] text-slate-400 whitespace-nowrap">{company.tax_regime}</span>
+                    </div>
                   </div>
-                </div>
-
-                <div className="grid grid-cols-3 divide-x divide-slate-100 border-t border-slate-100 bg-slate-50/50">
-                  <button
-                    onClick={() => openCompanyBranches(company)}
-                    className="py-2.5 text-[11px] font-bold text-[#0056d6] hover:bg-blue-50 transition-colors flex items-center justify-center gap-1 cursor-pointer"
-                  >
-                    <FileText className="w-3.5 h-3.5" /> Filiais
-                  </button>
-                  <button
-                    onClick={() => openEditModal(company)}
-                    className="py-2.5 text-[11px] font-bold text-slate-700 hover:bg-slate-100 transition-colors flex items-center justify-center gap-1 cursor-pointer"
-                  >
-                    <Edit className="w-3.5 h-3.5" /> Editar
-                  </button>
-                  <button
-                    onClick={() => handleDelete(company.id)}
-                    className="py-2.5 text-[11px] font-bold text-rose-600 hover:bg-rose-50 transition-colors flex items-center justify-center gap-1 cursor-pointer"
-                  >
-                    <Trash2 className="w-3.5 h-3.5" /> Eliminar
-                  </button>
                 </div>
               </div>
             ))}

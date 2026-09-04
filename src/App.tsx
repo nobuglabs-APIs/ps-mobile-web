@@ -18,6 +18,8 @@ import {
 } from './types';
 import { Sidebar } from './components/Sidebar';
 import { TopBar } from './components/TopBar';
+import { BottomNav } from './components/BottomNav';
+import { TypeSelectorSheet } from './components/TypeSelectorSheet';
 import { LoginScreen } from './components/LoginScreen';
 import { DashboardView } from './components/DashboardView';
 import { InvoicesView } from './components/InvoicesView';
@@ -81,8 +83,9 @@ export default function App() {
   const [loadingData, setLoadingData] = useState(false);
   const [dataLoadError, setDataLoadError] = useState<string | null>(null);
 
-  // 2. Estado do Menu Mobile
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  // 2. TypeSelector sheet (mobile)
+  const [typeSheetOpen, setTypeSheetOpen] = useState(false);
+  const [selectedDocType, setSelectedDocType] = useState<DocumentType>('factura');
 
   // 3. Faturas vindas do ERP (/api/v1/sales)
   const [invoices, setInvoices] = useState<Invoice[]>([]);
@@ -208,6 +211,20 @@ export default function App() {
   };
 
   const handleStartNewInvoice = () => {
+    // On mobile, always ask for the document type first (bottom sheet)
+    // On desktop, go straight to the form (type grid is visible there)
+    if (window.innerWidth < 1024) {
+      setTypeSheetOpen(true);
+      return;
+    }
+    setSelectedInvoiceForA4(null);
+    setSuccessInvoice(null);
+    setEditingInvoice(null);
+    setActiveTab('nova-fatura');
+  };
+
+  const handleSelectDocType = (type: DocumentType) => {
+    setSelectedDocType(type);
     setSelectedInvoiceForA4(null);
     setSuccessInvoice(null);
     setEditingInvoice(null);
@@ -254,8 +271,9 @@ export default function App() {
           return [saved, ...prev];
         });
         setEditingInvoice(null);
-        setSelectedInvoiceForA4(null);
-        setSuccessInvoice(saved);
+        // Skip success screen — go straight to A4 view (faster mobile flow)
+        setSuccessInvoice(null);
+        setSelectedInvoiceForA4(saved);
         return;
       }
     } catch (err: any) {
@@ -426,7 +444,6 @@ export default function App() {
     setSelectedInvoiceForA4(null);
     setSuccessInvoice(null);
     setEditingInvoice(null);
-    setIsMobileMenuOpen(false);
     setIsAuthenticated(false);
   };
 
@@ -441,14 +458,14 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-[#f8fafc] text-slate-800 flex selection:bg-[#0056d6] selection:text-white">
-      {/* Sidebar Lateral */}
+      {/* Sidebar Lateral (desktop only) */}
       <Sidebar
         activeTab={activeTab}
         onNavigate={handleNavigate}
         onNewInvoice={handleStartNewInvoice}
         onLogout={handleLogout}
-        isOpenMobile={isMobileMenuOpen}
-        onCloseMobile={() => setIsMobileMenuOpen(false)}
+        isOpenMobile={false}
+        onCloseMobile={() => {}}
         invoicesCount={invoices.length}
         clientsCount={clients.length}
       />
@@ -457,12 +474,14 @@ export default function App() {
       <div className="flex-1 flex flex-col min-w-0 lg:pl-64 print:pl-0">
         <TopBar
           activeTab={activeTab}
-          onOpenMobileMenu={() => setIsMobileMenuOpen(true)}
           onNewInvoice={handleStartNewInvoice}
           invoicesCount={invoices.length}
+          onOpenSettings={() => handleNavigate('definicoes')}
+          onLogout={handleLogout}
         />
 
-        <main className="flex-1 p-4 sm:p-6 lg:p-8 max-w-7xl w-full mx-auto">
+        {/* Bottom padding on mobile for bottom nav */}
+        <main className="flex-1 p-4 sm:p-6 lg:p-8 max-w-7xl w-full mx-auto pb-24 lg:pb-8">
           {dataLoadError && (
             <div
               role="alert"
@@ -543,6 +562,7 @@ export default function App() {
                   editingInvoice={editingInvoice}
                   clients={clients}
                   products={products}
+                  defaultDocType={editingInvoice?.docType || selectedDocType}
                   getNextDocNumber={getNextDocNumber}
                   onGenerateInvoice={handleGenerateInvoice}
                   onSaveDraft={handleSaveDraft}
@@ -587,6 +607,20 @@ export default function App() {
           )}
         </main>
       </div>
+
+      {/* Mobile Bottom Navigation (WhatsApp-style) */}
+      <BottomNav
+        activeTab={activeTab}
+        onNavigate={handleNavigate}
+        onNewInvoice={handleStartNewInvoice}
+      />
+
+      {/* Mobile Type Selector Bottom Sheet */}
+      <TypeSelectorSheet
+        isOpen={typeSheetOpen}
+        onClose={() => setTypeSheetOpen(false)}
+        onSelect={handleSelectDocType}
+      />
     </div>
   );
 }

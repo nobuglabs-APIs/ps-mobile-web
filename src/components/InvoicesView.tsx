@@ -198,26 +198,26 @@ export const InvoicesView: React.FC<InvoicesViewProps> = ({
   return (
     <div className="space-y-5 pb-12">
       {/* Topo: Título + Botão Nova Fatura */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div className="flex items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-extrabold text-[#0a1e42] tracking-tight">Faturas</h1>
-          <p className="text-xs sm:text-sm text-slate-500 mt-0.5">
+          <h1 className="text-lg lg:text-2xl font-extrabold text-[#0a1e42] tracking-tight">Faturas</h1>
+          <p className="text-[11px] lg:text-sm text-slate-500 mt-0.5 hidden lg:block">
             Arquivo e controlo de todos os documentos comerciais emitidos
           </p>
         </div>
 
-        <button
-          type="button"
-          onClick={onNewInvoice}
-          className="px-5 py-2.5 rounded-xl bg-[#0056d6] hover:bg-[#004dc0] active:bg-[#003ca0] text-white text-sm font-bold border border-blue-400/25 transition-all duration-150 active:scale-[0.98] flex items-center justify-center gap-2 cursor-pointer shrink-0 select-none"
-        >
+          <button
+            type="button"
+            onClick={onNewInvoice}
+            className="px-4 lg:px-5 py-2 lg:py-2.5 rounded-xl bg-[#0056d6] hover:bg-[#004dc0] active:bg-[#003ca0] text-white text-xs lg:text-sm font-bold border border-blue-400/25 transition-all duration-150 active:scale-[0.98] flex items-center justify-center gap-2 cursor-pointer shrink-0 select-none"
+          >
           <Plus className="w-4 h-4 stroke-[2.5]" />
           <span>Nova Fatura</span>
         </button>
       </div>
 
       {/* Barra de Pesquisa e Filtros */}
-      <div className="bg-white p-4 rounded-2xl border border-slate-200/90 space-y-4">
+      <div className="bg-white lg:p-4 lg:rounded-2xl lg:border lg:border-slate-200/90 space-y-3 lg:space-y-4">
         {/* Campo de Pesquisa */}
         <div className="relative">
           <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
@@ -228,13 +228,13 @@ export const InvoicesView: React.FC<InvoicesViewProps> = ({
               setSearchTerm(e.target.value);
               setCurrentPage(1);
             }}
-            placeholder="Pesquisar por número, cliente ou NIF..."
-            className="w-full pl-10 pr-4 py-2.5 text-sm rounded-xl border border-slate-200 focus:outline-none focus:border-[#0056d6] focus:ring-2 focus:ring-[#0056d6]/15 bg-slate-50/70 transition-all placeholder:text-slate-400"
+            placeholder="Pesquisar..."
+            className="w-full pl-10 pr-4 py-2.5 text-sm rounded-xl lg:border border-slate-200 focus:outline-none focus:border-[#0056d6] focus:ring-2 focus:ring-[#0056d6]/15 bg-slate-50/70 transition-all placeholder:text-slate-400"
           />
         </div>
 
         {/* Filtros por Estado */}
-        <div className="flex items-center gap-1.5 overflow-x-auto pb-1 text-xs font-semibold">
+        <div className="flex items-center gap-1.5 overflow-x-auto pb-1 text-xs font-semibold no-scrollbar">
           {(['Todas', 'Pagas', 'Pendentes', 'Vencidas', 'Rascunhos'] as FilterTab[]).map(
             (tab) => {
               const isActive = activeFilter === tab;
@@ -432,100 +432,29 @@ export const InvoicesView: React.FC<InvoicesViewProps> = ({
             )}
           </div>
 
-          {/* Cartões Responsivos — Mobile / Tablet */}
-          <div className="lg:hidden space-y-3">
+          {/* Mobile / Tablet: flat list */}
+          <div className="lg:hidden">
             {currentInvoices.map((inv) => (
-              <div
+              <button
                 key={inv.id}
-                className="bg-white rounded-2xl border border-slate-200/90 shadow-xs overflow-hidden"
+                onClick={() => onViewInvoice(inv)}
+                className="w-full flex items-center gap-3 px-4 py-3 text-left active:bg-slate-50 cursor-pointer border-b border-slate-100 last:border-b-0"
               >
-                <div className="p-4">
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="flex items-center gap-2.5 min-w-0">
-                      <span
-                        className={`inline-flex items-center justify-center p-2 rounded-xl border shrink-0 ${getDocTypeTone(
-                          inv.docType
-                        )}`}
-                      >
-                        {getDocTypeIcon(inv.docType)}
-                      </span>
-                      <div className="min-w-0">
-                        <button
-                          onClick={() => onViewInvoice(inv)}
-                          className="font-extrabold text-[#0a1e42] hover:text-[#0056d6] cursor-pointer truncate block text-sm"
-                        >
-                          {inv.number}
-                        </button>
-                        <div className="text-[11px] text-slate-400">
-                          {getDocTypeLabel(inv.docType)}
-                        </div>
-                      </div>
-                    </div>
-                    {getStatusBadge(inv.status)}
+                <div className="w-10 h-10 rounded-full bg-[#0a1e42]/5 flex items-center justify-center shrink-0">
+                  <ReceiptText className="w-4 h-4 text-[#0056d6]" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="font-bold text-sm text-[#0a1e42] truncate">{inv.number}</span>
+                    <span className="font-bold text-sm text-[#0a1e42] whitespace-nowrap">{formatKz(inv.total)}</span>
                   </div>
-
-                  <div className="mt-3 pt-3 border-t border-slate-100">
-                    <div className="font-bold text-slate-900 truncate text-xs sm:text-sm">
-                      {inv.clientName}
-                    </div>
-                    <div className="mt-2 grid grid-cols-2 gap-2 text-[11px]">
-                      <div className="rounded-lg bg-slate-50 px-2.5 py-1.5">
-                        <span className="block text-[10px] uppercase text-slate-400 font-semibold">
-                          Emissão
-                        </span>
-                        <span className="font-semibold text-slate-700">{inv.date}</span>
-                      </div>
-                      <div className="rounded-lg bg-slate-50 px-2.5 py-1.5">
-                        <span className="block text-[10px] uppercase text-slate-400 font-semibold">
-                          Vencimento
-                        </span>
-                        <span className="font-semibold text-slate-700">{inv.dueDate}</span>
-                      </div>
-                    </div>
-                    <div className="mt-2 flex items-center justify-between">
-                      <span className="text-[10px] uppercase text-slate-400 font-semibold">
-                        Total
-                      </span>
-                      <span className="font-extrabold text-[#0a1e42] whitespace-nowrap text-sm">
-                        {formatKz(inv.total)}
-                      </span>
-                    </div>
+                  <div className="flex items-center justify-between gap-2 mt-0.5">
+                    <span className="text-xs text-slate-500 truncate">{inv.clientName}</span>
+                    <span className="text-[10px] text-slate-400 whitespace-nowrap">{inv.date}</span>
                   </div>
                 </div>
-
-                <div className="grid grid-cols-5 divide-x divide-slate-100 border-t border-slate-100 bg-slate-50/50">
-                  <button
-                    onClick={() => onViewInvoice(inv)}
-                    className="py-2.5 text-[11px] font-bold text-[#0056d6] hover:bg-blue-50 transition-colors flex flex-col items-center justify-center gap-1 cursor-pointer"
-                  >
-                    <Eye className="w-3.5 h-3.5" /> Ver
-                  </button>
-                  <button
-                    onClick={() => onEditInvoice(inv)}
-                    className="py-2.5 text-[11px] font-bold text-slate-700 hover:bg-slate-100 transition-colors flex flex-col items-center justify-center gap-1 cursor-pointer"
-                  >
-                    <Edit className="w-3.5 h-3.5" /> Editar
-                  </button>
-                  <button
-                    onClick={() => onDuplicateInvoice(inv)}
-                    className="py-2.5 text-[11px] font-bold text-amber-700 hover:bg-amber-50 transition-colors flex flex-col items-center justify-center gap-1 cursor-pointer"
-                  >
-                    <Copy className="w-3.5 h-3.5" /> Duplicar
-                  </button>
-                  <button
-                    onClick={() => handlePrint(inv)}
-                    className="py-2.5 text-[11px] font-bold text-indigo-600 hover:bg-indigo-50 transition-colors flex flex-col items-center justify-center gap-1 cursor-pointer"
-                  >
-                    <Printer className="w-3.5 h-3.5" /> PDF
-                  </button>
-                  <button
-                    onClick={() => setDeleteConfirmId(inv.id)}
-                    className="py-2.5 text-[11px] font-bold text-rose-600 hover:bg-rose-50 transition-colors flex flex-col items-center justify-center gap-1 cursor-pointer"
-                  >
-                    <Trash2 className="w-3.5 h-3.5" /> Apagar
-                  </button>
-                </div>
-              </div>
+                <ChevronRight className="w-4 h-4 text-slate-300 shrink-0" />
+              </button>
             ))}
 
             {/* Paginação Mobile */}
