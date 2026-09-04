@@ -13,6 +13,7 @@ import {
 } from 'lucide-react';
 import { ProductService } from '../types';
 import { formatKz } from '../utils/formatters';
+import { Select } from './Select';
 
 interface ProductsServicesViewProps {
   products: ProductService[];
@@ -477,16 +478,16 @@ export const ProductsServicesView: React.FC<ProductsServicesViewProps> = ({
                   <label className="text-xs font-bold text-slate-700 block mb-1">
                     Taxa de IVA (%)
                   </label>
-                  <select
-                    value={taxPercent}
-                    onChange={(e) => setTaxPercent(parseInt(e.target.value, 10))}
-                    className="w-full px-3.5 py-2.5 text-sm rounded-xl border border-slate-200 focus:outline-none focus:border-[#0056d6] focus:ring-2 focus:ring-[#0056d6]/15 bg-slate-50/70 font-medium"
-                  >
-                    <option value={14}>14% (Regime Geral)</option>
-                    <option value={7}>7% (Regime Especial)</option>
-                    <option value={5}>5% (Bens Essenciais)</option>
-                    <option value={0}>0% (Isento)</option>
-                  </select>
+                  <Select
+                    value={String(taxPercent)}
+                    onChange={(v) => setTaxPercent(parseInt(v, 10))}
+                    options={[
+                      { value: '14', label: '14% (Regime Geral)' },
+                      { value: '7', label: '7% (Regime Especial)' },
+                      { value: '5', label: '5% (Bens Essenciais)' },
+                      { value: '0', label: '0% (Isento)' },
+                    ]}
+                  />
                 </div>
               </div>
 

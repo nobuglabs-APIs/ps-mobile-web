@@ -630,6 +630,153 @@ export function mapCompanyFromUser(user: UserRead | null, fallback: CompanyInfo)
 }
 
 // ---------------------------------------------------------------------------
+// Companies (Organização)
+// ---------------------------------------------------------------------------
+
+export type ErpTaxRegime = 'GERAL' | 'SIMPLIFICADO' | 'EXCLUIDO' | 'ISENTO' | 'NAO_SUJEITO';
+
+export interface ErpCompany {
+  id: string;
+  name: string;
+  trading_name: string | null;
+  nif: string;
+  registration_number: string | null;
+  tax_regime: ErpTaxRegime;
+  vat_rate: ErpVatRate;
+  vat_registration_number: string | null;
+  is_e_invoicing_enabled: boolean;
+  agt_software_code: string | null;
+  agt_certificate: string | null;
+  address: string | null;
+  municipality: string | null;
+  province: string | null;
+  country: string;
+  phone: string | null;
+  email: string | null;
+  website: string | null;
+  bank_name: string | null;
+  bank_iban: string | null;
+  bank_swift: string | null;
+  currency: string;
+  active: boolean;
+  logo_url: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ErpBranch {
+  id: string;
+  company_id: string;
+  name: string;
+  address: string | null;
+  municipality: string | null;
+  province: string | null;
+  phone: string | null;
+  email: string | null;
+  active: boolean;
+}
+
+export async function listCompanies(page = 1, pageSize = 20): Promise<ErpCompany[]> {
+  const params = new URLSearchParams({ page: String(page), page_size: String(pageSize) });
+  const data = await request<Page<ErpCompany>>(`/api/v1/companies?${params.toString()}`);
+  return data.items || [];
+}
+
+export async function getCompany(companyId: string): Promise<ErpCompany> {
+  return request<ErpCompany>(`/api/v1/companies/${companyId}`);
+}
+
+export async function createCompany(data: Partial<ErpCompany>): Promise<ErpCompany> {
+  const payload = {
+    name: data.name,
+    trading_name: data.trading_name || null,
+    nif: data.nif,
+    registration_number: data.registration_number || null,
+    tax_regime: data.tax_regime || 'GERAL',
+    vat_rate: data.vat_rate || '14',
+    vat_registration_number: data.vat_registration_number || null,
+    is_e_invoicing_enabled: data.is_e_invoicing_enabled ?? false,
+    agt_software_code: data.agt_software_code || null,
+    agt_certificate: data.agt_certificate || null,
+    address: data.address || null,
+    municipality: data.municipality || null,
+    province: data.province || null,
+    country: data.country || 'Angola',
+    phone: data.phone || null,
+    email: data.email || null,
+    website: data.website || null,
+    bank_name: data.bank_name || null,
+    bank_iban: data.bank_iban || null,
+    bank_swift: data.bank_swift || null,
+    currency: data.currency || 'AOA',
+  };
+  return request<ErpCompany>('/api/v1/companies', { method: 'POST', body: payload });
+}
+
+export async function updateCompany(companyId: string, data: Partial<ErpCompany>): Promise<ErpCompany> {
+  const payload: Record<string, unknown> = {};
+  if (data.name !== undefined) payload.name = data.name;
+  if (data.trading_name !== undefined) payload.trading_name = data.trading_name;
+  if (data.nif !== undefined) payload.nif = data.nif;
+  if (data.registration_number !== undefined) payload.registration_number = data.registration_number;
+  if (data.tax_regime !== undefined) payload.tax_regime = data.tax_regime;
+  if (data.vat_rate !== undefined) payload.vat_rate = data.vat_rate;
+  if (data.vat_registration_number !== undefined) payload.vat_registration_number = data.vat_registration_number;
+  if (data.is_e_invoicing_enabled !== undefined) payload.is_e_invoicing_enabled = data.is_e_invoicing_enabled;
+  if (data.agt_software_code !== undefined) payload.agt_software_code = data.agt_software_code;
+  if (data.agt_certificate !== undefined) payload.agt_certificate = data.agt_certificate;
+  if (data.address !== undefined) payload.address = data.address;
+  if (data.municipality !== undefined) payload.municipality = data.municipality;
+  if (data.province !== undefined) payload.province = data.province;
+  if (data.country !== undefined) payload.country = data.country;
+  if (data.phone !== undefined) payload.phone = data.phone;
+  if (data.email !== undefined) payload.email = data.email;
+  if (data.website !== undefined) payload.website = data.website;
+  if (data.bank_name !== undefined) payload.bank_name = data.bank_name;
+  if (data.bank_iban !== undefined) payload.bank_iban = data.bank_iban;
+  if (data.bank_swift !== undefined) payload.bank_swift = data.bank_swift;
+  if (data.currency !== undefined) payload.currency = data.currency;
+  return request<ErpCompany>(`/api/v1/companies/${companyId}`, { method: 'PATCH', body: payload });
+}
+
+export async function deleteCompany(companyId: string): Promise<void> {
+  await request(`/api/v1/companies/${companyId}`, { method: 'DELETE' });
+}
+
+// ---------------------------------------------------------------------------
+// Branches (Filiais)
+// ---------------------------------------------------------------------------
+
+export async function listBranches(companyId: string): Promise<ErpBranch[]> {
+  return request<ErpBranch[]>(`/api/v1/companies/${companyId}/branches`);
+}
+
+export async function createBranch(companyId: string, data: Partial<ErpBranch>): Promise<ErpBranch> {
+  const payload = {
+    name: data.name,
+    address: data.address || null,
+    municipality: data.municipality || null,
+    province: data.province || null,
+    phone: data.phone || null,
+    email: data.email || null,
+    active: data.active ?? true,
+  };
+  return request<ErpBranch>(`/api/v1/companies/${companyId}/branches`, { method: 'POST', body: payload });
+}
+
+export async function updateBranch(branchId: string, data: Partial<ErpBranch>): Promise<ErpBranch> {
+  const payload: Record<string, unknown> = {};
+  if (data.name !== undefined) payload.name = data.name;
+  if (data.address !== undefined) payload.address = data.address;
+  if (data.municipality !== undefined) payload.municipality = data.municipality;
+  if (data.province !== undefined) payload.province = data.province;
+  if (data.phone !== undefined) payload.phone = data.phone;
+  if (data.email !== undefined) payload.email = data.email;
+  if (data.active !== undefined) payload.active = data.active;
+  return request<ErpBranch>(`/api/v1/branches/${branchId}`, { method: 'PATCH', body: payload });
+}
+
+// ---------------------------------------------------------------------------
 // Date helpers
 // ---------------------------------------------------------------------------
 

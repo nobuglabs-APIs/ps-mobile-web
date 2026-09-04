@@ -107,6 +107,7 @@ export type ActiveTab =
   | 'nova-fatura'
   | 'clientes'
   | 'produtos'
+  | 'organizacao'
   | 'definicoes'
   | 'historico'
   | 'configuracoes';

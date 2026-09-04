@@ -27,6 +27,7 @@ import { InvoiceSuccessView } from './components/InvoiceSuccessView';
 import { ClientsView } from './components/ClientsView';
 import { ProductsServicesView } from './components/ProductsServicesView';
 import { SettingsView } from './components/SettingsView';
+import { OrganizacaoView } from './components/OrganizacaoView';
 import { getTodayFormatted, getDueDateFormatted } from './utils/formatters';
 import {
   isAuthenticated as hasAuthToken,
@@ -573,6 +574,8 @@ export default function App() {
                   onDeleteProduct={handleDeleteProduct}
                 />
               )}
+
+              {activeTab === 'organizacao' && <OrganizacaoView />}
 
               {(activeTab === 'definicoes' || activeTab === 'configuracoes') && (
                 <SettingsView

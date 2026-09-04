@@ -22,6 +22,7 @@ import {
 } from 'lucide-react';
 import { Invoice, DocumentType, InvoiceStatus } from '../types';
 import { formatKz, formatKzDecimal } from '../utils/formatters';
+import { Select } from './Select';
 
 interface HistoricoViewProps {
   invoices: Invoice[];
@@ -346,30 +347,30 @@ export const HistoricoView: React.FC<HistoricoViewProps> = ({
 
           {/* Filtro de Estado */}
           <div className="sm:col-span-3">
-            <select
+            <Select
               value={selectedStatus}
-              onChange={(e) => setSelectedStatus(e.target.value)}
-              className="w-full px-3 py-2.5 rounded-xl border border-slate-200 focus:border-[#0056d6] text-xs sm:text-sm text-slate-800 font-medium cursor-pointer"
-            >
-              <option value="all">Todos os Estados</option>
-              <option value="Pendente">Pendentes</option>
-              <option value="Paga">Pagas / Aprovadas</option>
-              <option value="Cancelada">Canceladas</option>
-            </select>
+              onChange={setSelectedStatus}
+              options={[
+                { value: 'all', label: 'Todos os Estados' },
+                { value: 'Pendente', label: 'Pendentes' },
+                { value: 'Paga', label: 'Pagas / Aprovadas' },
+                { value: 'Cancelada', label: 'Canceladas' },
+              ]}
+            />
           </div>
 
           {/* Ordenação */}
           <div className="sm:col-span-3">
-            <select
+            <Select
               value={sortBy}
-              onChange={(e) => setSortBy(e.target.value as any)}
-              className="w-full px-3 py-2.5 rounded-xl border border-slate-200 focus:border-[#0056d6] text-xs sm:text-sm text-slate-800 font-medium cursor-pointer"
-            >
-              <option value="recent">Mais Recentes</option>
-              <option value="old">Mais Antigos</option>
-              <option value="highest">Maior Valor</option>
-              <option value="lowest">Menor Valor</option>
-            </select>
+              onChange={(v) => setSortBy(v as any)}
+              options={[
+                { value: 'recent', label: 'Mais Recentes' },
+                { value: 'old', label: 'Mais Antigos' },
+                { value: 'highest', label: 'Maior Valor' },
+                { value: 'lowest', label: 'Menor Valor' },
+              ]}
+            />
           </div>
         </div>
       </div>

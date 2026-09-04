@@ -9,6 +9,7 @@ import {
   PlusCircle,
   X,
   ChevronRight,
+  Building2,
 } from 'lucide-react';
 import { ActiveTab } from '../types';
 import { PSLogo } from './PSLogo';
@@ -61,6 +62,11 @@ export const Sidebar: React.FC<SidebarProps> = ({
       id: 'produtos',
       label: 'Produtos / Serviços',
       icon: <Package className="w-5 h-5" />,
+    },
+    {
+      id: 'organizacao',
+      label: 'Organização',
+      icon: <Building2 className="w-5 h-5" />,
     },
     {
       id: 'definicoes',
