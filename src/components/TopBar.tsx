@@ -8,6 +8,10 @@ interface TopBarProps {
   invoicesCount: number;
   onOpenSettings: () => void;
   onLogout: () => void;
+  canCreateInvoice: boolean;
+  canManageSettings: boolean;
+  userName: string;
+  roleLabel: string;
 }
 
 export const TopBar: React.FC<TopBarProps> = ({
@@ -16,6 +20,10 @@ export const TopBar: React.FC<TopBarProps> = ({
   invoicesCount,
   onOpenSettings,
   onLogout,
+  canCreateInvoice,
+  canManageSettings,
+  userName,
+  roleLabel,
 }) => {
   const [showNotifications, setShowNotifications] = useState(false);
   const [showMobileMenu, setShowMobileMenu] = useState(false);
@@ -119,7 +127,7 @@ export const TopBar: React.FC<TopBarProps> = ({
               <>
                 <div className="fixed inset-0 z-40" onClick={() => setShowMobileMenu(false)} />
                 <div className="absolute right-0 mt-2 w-48 bg-white rounded-xl shadow-xl border border-slate-200 p-1.5 z-50">
-                  <button
+                  {canManageSettings && <button
                     type="button"
                     onClick={() => {
                       setShowMobileMenu(false);
@@ -129,7 +137,7 @@ export const TopBar: React.FC<TopBarProps> = ({
                   >
                     <Settings className="w-4 h-4 text-[#0056d6]" />
                     <span>Definições</span>
-                  </button>
+                  </button>}
                   <button
                     type="button"
                     onClick={() => {
@@ -154,10 +162,10 @@ export const TopBar: React.FC<TopBarProps> = ({
           <div>
             <div className="flex items-center gap-2">
               <h2 className="text-lg font-extrabold text-[#0a1e42] tracking-tight">
-                {getGreeting()}, Administrador
+                {getGreeting()}, {userName}
               </h2>
               <span className="text-[11px] px-2 py-0.5 rounded-full font-bold bg-amber-50 text-[#d49419] border border-[#d49419]/30">
-                PS Comércio
+                {roleLabel}
               </span>
             </div>
             <p className="text-xs text-slate-500 capitalize">{getFormattedDate()}</p>
@@ -195,14 +203,14 @@ export const TopBar: React.FC<TopBarProps> = ({
             )}
           </div>
 
-          <button
+          {canCreateInvoice && <button
             type="button"
             onClick={onNewInvoice}
             className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-[#0056d6] hover:bg-[#004dc0] active:bg-[#003ca0] text-white text-sm font-bold border border-blue-400/25 transition-all duration-150 active:scale-[0.98] cursor-pointer select-none"
           >
             <Plus className="w-4 h-4 stroke-[2.5]" />
             <span>Nova Fatura</span>
-          </button>
+          </button>}
 
           <div className="flex items-center gap-2 pl-2 border-l border-slate-200">
             <div className="w-8 h-8 rounded-xl bg-[#0a1e42] text-[#f59e0b] border border-slate-700/50 flex items-center justify-center font-bold text-xs select-none">

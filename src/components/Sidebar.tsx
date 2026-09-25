@@ -23,6 +23,10 @@ interface SidebarProps {
   onCloseMobile: () => void;
   invoicesCount?: number;
   clientsCount?: number;
+  canAccessTab: (tab: ActiveTab) => boolean;
+  canCreateInvoice: boolean;
+  userName: string;
+  roleLabel: string;
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({
@@ -34,6 +38,10 @@ export const Sidebar: React.FC<SidebarProps> = ({
   onCloseMobile,
   invoicesCount = 0,
   clientsCount = 0,
+  canAccessTab,
+  canCreateInvoice,
+  userName,
+  roleLabel,
 }) => {
   const navItems: Array<{
     id: ActiveTab;
@@ -125,7 +133,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
         {/* Corpo Scrollável da Sidebar */}
         <div className="flex-1 overflow-y-auto py-3 space-y-4">
           {/* Botão de Ação Rápida: + Nova Fatura */}
-          <div className="px-3">
+          {canCreateInvoice && <div className="px-3">
             <button
               type="button"
               onClick={handleNewInvoiceClick}
@@ -138,11 +146,11 @@ export const Sidebar: React.FC<SidebarProps> = ({
               <PlusCircle className="w-4 h-4 stroke-[2.5]" />
               <span>Nova Fatura</span>
             </button>
-          </div>
+          </div>}
 
           {/* Lista de Navegação Principal */}
           <nav className="px-3 space-y-1">
-            {navItems.map((item) => {
+            {navItems.filter((item) => canAccessTab(item.id)).map((item) => {
               const isActive =
                 activeTab === item.id ||
                 (item.id === 'faturas' && activeTab === 'historico') ||
@@ -203,10 +211,10 @@ export const Sidebar: React.FC<SidebarProps> = ({
             </div>
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-1.5">
-                <p className="text-xs font-bold text-white truncate">Patricia Segunda</p>
+                <p className="text-xs font-bold text-white truncate">{userName}</p>
                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 shrink-0" title="Sessão ativa" />
               </div>
-              <p className="text-[10px] text-slate-400 font-medium">Administrador</p>
+              <p className="text-[10px] text-slate-400 font-medium">{roleLabel}</p>
             </div>
           </div>
 

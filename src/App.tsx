@@ -54,6 +54,7 @@ import {
   toAppDate,
 } from './lib/api';
 import type { ErpSale, ErpClient } from './lib/api';
+import { getAccessControl } from './lib/permissions';
 
 const STORAGE_KEY_COMPANY = 'ps_faturas_company_v3';
 
@@ -81,6 +82,7 @@ function attachClientInfo(sales: ErpSale[], clients: Client[]): Invoice[] {
 export default function App() {
   // 1. Estado de autenticação a partir do token guardado no ERP
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(() => hasAuthToken());
+  const access = getAccessControl(getUser());
   const [loadingData, setLoadingData] = useState(false);
   const [dataLoadError, setDataLoadError] = useState<string | null>(null);
 
@@ -206,6 +208,10 @@ export default function App() {
 
   // NAVEGAÇÃO RÁPIDA
   const handleNavigate = (tab: ActiveTab) => {
+    if (!access.canAccessTab(tab)) {
+      setActiveTab('dashboard');
+      return;
+    }
     setSelectedInvoiceForA4(null);
     setSuccessInvoice(null);
     setEditingInvoice(null);
@@ -214,6 +220,7 @@ export default function App() {
   };
 
   const handleStartNewInvoice = () => {
+    if (!access.can('invoice.create')) return;
     // On mobile, always ask for the document type first (bottom sheet)
     // On desktop, go straight to the form (type grid is visible there)
     if (window.innerWidth < 1024) {
@@ -227,6 +234,7 @@ export default function App() {
   };
 
   const handleSelectDocType = (type: DocumentType) => {
+    if (!access.can('invoice.create')) return;
     setSelectedDocType(type);
     setSelectedInvoiceForA4(null);
     setSuccessInvoice(null);
@@ -271,6 +279,8 @@ export default function App() {
 
   // AÇÕES DE FATURAS
   const handleGenerateInvoice = async (newOrUpdatedInvoice: Invoice) => {
+    const isUpdate = invoices.some((invoice) => invoice.id === newOrUpdatedInvoice.id);
+    if (!access.can(isUpdate ? 'invoice.edit' : 'invoice.create')) return;
     try {
       const saved = await persistSale(newOrUpdatedInvoice, true);
       if (saved) {
@@ -291,6 +301,8 @@ export default function App() {
   };
 
   const handleSaveDraft = async (draftInvoice: Invoice) => {
+    const isUpdate = invoices.some((invoice) => invoice.id === draftInvoice.id);
+    if (!access.can(isUpdate ? 'invoice.edit' : 'invoice.create')) return;
     try {
       const saved = await persistSale(draftInvoice, false);
       if (saved) {
@@ -319,6 +331,7 @@ export default function App() {
   };
 
   const handleStartEdit = (inv: Invoice) => {
+    if (!access.can('invoice.edit')) return;
     setSuccessInvoice(null);
     setSelectedInvoiceForA4(null);
     setEditingInvoice(inv);
@@ -326,6 +339,7 @@ export default function App() {
   };
 
   const handleDeleteInvoice = async (invoiceId: string) => {
+    if (!access.can('invoice.cancel')) return false;
     try {
       await cancelSale(invoiceId, 'Anulado a partir do PS Faturas');
     } catch {
@@ -342,6 +356,7 @@ export default function App() {
   };
 
   const handleDuplicateInvoice = (invoice: Invoice) => {
+    if (!access.can('invoice.create')) return;
     const docType = invoice.docType || 'factura';
     const newNumber = getNextDocNumber(docType);
     const duplicated: Invoice = {
@@ -361,6 +376,7 @@ export default function App() {
   };
 
   const handleToggleStatus = async (invoiceId: string, newStatus: InvoiceStatus) => {
+    if (!access.can('invoice.pay')) return;
     // Quando marcada como paga, regista o pagamento no ERP
     if (newStatus === 'Paga') {
       const inv = invoices.find((i) => i.id === invoiceId);
@@ -383,6 +399,7 @@ export default function App() {
 
   // CLIENTES
   const handleAddClient = async (client: Client) => {
+    if (!access.can('client.manage')) return false;
     try {
       const created = await createClient(client);
       setClients((prev) => [...prev, created]);
@@ -394,6 +411,7 @@ export default function App() {
   };
 
   const handleUpdateClient = async (updatedClient: Client) => {
+    if (!access.can('client.manage')) return false;
     try {
       const updated = await updateClient(updatedClient.id, updatedClient);
       setClients((prev) => prev.map((c) => (c.id === updated.id ? updated : c)));
@@ -405,6 +423,7 @@ export default function App() {
   };
 
   const handleDeleteClient = async (clientId: string) => {
+    if (!access.can('client.delete')) return;
     try {
       await deactivateClient(clientId);
     } catch {
@@ -423,6 +442,7 @@ export default function App() {
 
   // PRODUTOS
   const handleAddProduct = async (product: ProductService) => {
+    if (!access.can('product.manage')) return false;
     try {
       const created = await createProduct(product);
       setProducts((prev) => [...prev, created]);
@@ -434,6 +454,7 @@ export default function App() {
   };
 
   const handleUpdateProduct = async (updatedProduct: ProductService) => {
+    if (!access.can('product.manage')) return false;
     try {
       const updated = await updateProduct(updatedProduct.id, updatedProduct);
       setProducts((prev) => prev.map((p) => (p.id === updated.id ? updated : p)));
@@ -445,6 +466,7 @@ export default function App() {
   };
 
   const handleDeleteProduct = async (productId: string) => {
+    if (!access.can('product.delete')) return;
     try {
       await deactivateProduct(productId);
     } catch {
@@ -456,6 +478,7 @@ export default function App() {
 
   // CONFIGURAÇÕES
   const handleSaveCompanyInfo = (updatedInfo: CompanyInfo) => {
+    if (!access.can('settings.manage')) return;
     setCompanyInfo(updatedInfo);
   };
 
@@ -493,6 +516,10 @@ export default function App() {
         onCloseMobile={() => {}}
         invoicesCount={invoices.length}
         clientsCount={clients.length}
+        canAccessTab={access.canAccessTab}
+        canCreateInvoice={access.can('invoice.create')}
+        userName={getUser()?.full_name || getUser()?.username || 'Utilizador'}
+        roleLabel={access.roleLabel}
       />
 
       {/* Conteúdo Principal com TopBar */}
@@ -503,6 +530,10 @@ export default function App() {
           invoicesCount={invoices.length}
           onOpenSettings={() => handleNavigate('definicoes')}
           onLogout={handleLogout}
+          canCreateInvoice={access.can('invoice.create')}
+          canManageSettings={access.can('settings.manage')}
+          userName={getUser()?.full_name || getUser()?.username || 'Utilizador'}
+          roleLabel={access.roleLabel}
         />
 
         {/* Bottom padding on mobile for bottom nav */}
@@ -542,6 +573,11 @@ export default function App() {
               onEdit={handleStartEdit}
               onNewInvoice={handleStartNewInvoice}
               onToggleStatus={(id, status) => handleToggleStatus(id, status)}
+              onDelete={handleDeleteInvoice}
+              canEdit={access.can('invoice.edit')}
+              canCreate={access.can('invoice.create')}
+              canToggleStatus={access.can('invoice.pay')}
+              canDelete={access.can('invoice.cancel')}
             />
           ) : successInvoice ? (
             /* CASO 2: Tela de Sucesso após Emissão da Fatura */
@@ -581,6 +617,9 @@ export default function App() {
                   onEditInvoice={handleStartEdit}
                   onDuplicateInvoice={handleDuplicateInvoice}
                   onDeleteInvoice={handleDeleteInvoice}
+                  canCreate={access.can('invoice.create')}
+                  canEdit={access.can('invoice.edit')}
+                  canDelete={access.can('invoice.cancel')}
                   clientFilter={invoiceClientFilter}
                   onClearClientFilter={() => setInvoiceClientFilter('')}
                 />
@@ -613,6 +652,8 @@ export default function App() {
                   onUpdateClient={handleUpdateClient}
                   onDeleteClient={handleDeleteClient}
                   onViewClientInvoices={handleViewClientInvoices}
+                  canManage={access.can('client.manage')}
+                  canDelete={access.can('client.delete')}
                 />
               )}
 
@@ -622,10 +663,12 @@ export default function App() {
                   onAddProduct={handleAddProduct}
                   onUpdateProduct={handleUpdateProduct}
                   onDeleteProduct={handleDeleteProduct}
+                  canManage={access.can('product.manage')}
+                  canDelete={access.can('product.delete')}
                 />
               )}
 
-              {activeTab === 'organizacao' && <OrganizacaoView />}
+              {activeTab === 'organizacao' && access.can('organization.manage') && <OrganizacaoView />}
 
               {(activeTab === 'definicoes' || activeTab === 'configuracoes') && (
                 <SettingsView
@@ -643,6 +686,7 @@ export default function App() {
         activeTab={activeTab}
         onNavigate={handleNavigate}
         onNewInvoice={handleStartNewInvoice}
+        canCreateInvoice={access.can('invoice.create')}
       />
 
       {/* Mobile Type Selector Bottom Sheet */}

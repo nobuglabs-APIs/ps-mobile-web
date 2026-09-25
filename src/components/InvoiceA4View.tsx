@@ -24,6 +24,7 @@ import {
   PenTool,
   Loader2,
   XCircle,
+  Trash2,
 } from 'lucide-react';
 import { Invoice, CompanyInfo, DocumentType, InvoiceStatus } from '../types';
 import { formatKz, formatKzDecimal, numberToKzWords } from '../utils/formatters';
@@ -38,6 +39,11 @@ interface InvoiceA4ViewProps {
   onEdit: (invoice: Invoice) => void;
   onNewInvoice: () => void;
   onToggleStatus?: (invoiceId: string, newStatus: InvoiceStatus) => void;
+  onDelete: (invoiceId: string) => Promise<boolean>;
+  canEdit: boolean;
+  canCreate: boolean;
+  canToggleStatus: boolean;
+  canDelete: boolean;
 }
 
 function getDocumentTypeName(type?: DocumentType): string {
@@ -102,6 +108,11 @@ export const InvoiceA4View: React.FC<InvoiceA4ViewProps> = ({
   onEdit,
   onNewInvoice,
   onToggleStatus,
+  onDelete,
+  canEdit,
+  canCreate,
+  canToggleStatus,
+  canDelete,
 }) => {
   const [copied, setCopied] = useState(false);
   const [generatingPdf, setGeneratingPdf] = useState(false);
@@ -159,6 +170,11 @@ export const InvoiceA4View: React.FC<InvoiceA4ViewProps> = ({
 
   const dateParts = getDateParts(invoice.date);
   const isCancelled = invoice.status === 'Cancelada';
+  const handleDelete = async () => {
+    if (window.confirm(`Anular ${invoice.number}? O documento continuará no histórico como cancelado.`)) {
+      await onDelete(invoice.id);
+    }
+  };
 
   /* ════════════════════════════════════════════════════════════════════
      MOBILE LAYOUT — clean native cards, no scaled A4
@@ -378,7 +394,7 @@ export const InvoiceA4View: React.FC<InvoiceA4ViewProps> = ({
       {/* Sticky mobile action bar */}
       <div className="fixed bottom-16 left-0 right-0 z-40 bg-white/95 backdrop-blur-md border-t border-slate-200 px-3 py-2 safe-area-pb">
         <div className="flex gap-2">
-          {onToggleStatus && !isCancelled && (
+          {canToggleStatus && onToggleStatus && !isCancelled && (
             <button
               onClick={() => onToggleStatus(invoice.id, invoice.status === 'Paga' ? 'Pendente' : 'Paga')}
               className={`flex-1 py-2.5 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition-colors cursor-pointer ${
@@ -391,7 +407,7 @@ export const InvoiceA4View: React.FC<InvoiceA4ViewProps> = ({
               {invoice.status === 'Paga' ? 'Pendente' : 'Paga'}
             </button>
           )}
-          {!isCancelled && (
+          {canEdit && !isCancelled && (
             <button
               onClick={() => onEdit(invoice)}
               className="flex-1 py-2.5 rounded-xl text-xs font-bold bg-slate-100 text-slate-700 flex items-center justify-center gap-1.5 cursor-pointer"
@@ -400,6 +416,14 @@ export const InvoiceA4View: React.FC<InvoiceA4ViewProps> = ({
               Editar
             </button>
           )}
+          {canDelete && !isCancelled && <button
+            onClick={handleDelete}
+            className="py-2.5 px-3 rounded-xl text-xs font-bold bg-rose-50 text-rose-700 border border-rose-200 flex items-center justify-center gap-1.5 cursor-pointer"
+            aria-label={`Anular ${invoice.number}`}
+          >
+            <Trash2 className="w-3.5 h-3.5" />
+            Anular
+          </button>}
           <button
             onClick={handlePrint}
             className="flex-1 py-2.5 rounded-xl text-xs font-bold bg-slate-100 text-slate-700 flex items-center justify-center gap-1.5 cursor-pointer"
@@ -460,7 +484,7 @@ export const InvoiceA4View: React.FC<InvoiceA4ViewProps> = ({
           )}
         </div>
         <div className="flex flex-col sm:flex-row sm:flex-wrap items-stretch sm:items-center gap-2 w-full sm:w-auto">
-          {onToggleStatus && !isCancelled && (
+          {canToggleStatus && onToggleStatus && !isCancelled && (
             <button
               onClick={() => onToggleStatus(invoice.id, invoice.status === 'Paga' ? 'Pendente' : 'Paga')}
               className={`inline-flex w-full sm:w-auto items-center justify-center gap-1.5 px-3 py-2.5 sm:py-2 rounded-xl text-xs font-bold transition-colors cursor-pointer ${
@@ -470,7 +494,7 @@ export const InvoiceA4View: React.FC<InvoiceA4ViewProps> = ({
               {invoice.status === 'Paga' ? <><Clock className="w-3.5 h-3.5" /><span>Marcar Pendente</span></> : <><CheckCircle2 className="w-3.5 h-3.5" /><span>Marcar Paga</span></>}
             </button>
           )}
-          {!isCancelled && (
+          {canEdit && !isCancelled && (
             <button onClick={() => onEdit(invoice)} className="inline-flex w-full sm:w-auto items-center justify-center gap-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 px-3.5 py-2.5 sm:py-2 rounded-xl text-xs font-bold transition-colors cursor-pointer">
               <Edit className="w-3.5 h-3.5 text-slate-600" /><span>Editar</span>
             </button>
@@ -481,9 +505,12 @@ export const InvoiceA4View: React.FC<InvoiceA4ViewProps> = ({
           <button onClick={handleDownloadPdf} disabled={generatingPdf} className="inline-flex w-full sm:w-auto items-center justify-center gap-1.5 bg-[#0056d6] hover:bg-[#0047b3] text-white px-4 py-2.5 sm:py-2 rounded-xl text-xs font-bold shadow-xs hover:shadow transition-all cursor-pointer disabled:opacity-60 disabled:cursor-wait" title="Descarregar o documento em PDF">
             {generatingPdf ? <><Loader2 className="w-4 h-4 animate-spin" /><span>A gerar…</span></> : <><FileDown className="w-4 h-4" /><span>Gerar PDF</span></>}
           </button>
-          <button onClick={onNewInvoice} className="inline-flex w-full sm:w-auto items-center justify-center gap-1.5 bg-[#0a1e42] hover:bg-[#132d5e] text-white px-3.5 py-2.5 sm:py-2 rounded-xl text-xs font-bold shadow-xs transition-colors cursor-pointer">
+          {canDelete && !isCancelled && <button onClick={handleDelete} className="inline-flex w-full sm:w-auto items-center justify-center gap-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 px-3.5 py-2.5 sm:py-2 rounded-xl text-xs font-bold transition-colors cursor-pointer">
+            <Trash2 className="w-3.5 h-3.5" /><span>Anular</span>
+          </button>}
+          {canCreate && <button onClick={onNewInvoice} className="inline-flex w-full sm:w-auto items-center justify-center gap-1.5 bg-[#0a1e42] hover:bg-[#132d5e] text-white px-3.5 py-2.5 sm:py-2 rounded-xl text-xs font-bold shadow-xs transition-colors cursor-pointer">
             <PlusCircle className="w-3.5 h-3.5 text-amber-400" /><span>Nova Fatura</span>
-          </button>
+          </button>}
         </div>
       </div>
 

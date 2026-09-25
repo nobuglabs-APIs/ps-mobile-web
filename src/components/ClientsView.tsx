@@ -24,6 +24,8 @@ interface ClientsViewProps {
   onUpdateClient: (client: Client) => Promise<boolean>;
   onDeleteClient: (clientId: string) => void;
   onViewClientInvoices: (clientName: string) => void;
+  canManage: boolean;
+  canDelete: boolean;
 }
 
 export const ClientsView: React.FC<ClientsViewProps> = ({
@@ -33,6 +35,8 @@ export const ClientsView: React.FC<ClientsViewProps> = ({
   onUpdateClient,
   onDeleteClient,
   onViewClientInvoices,
+  canManage,
+  canDelete,
 }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -145,14 +149,14 @@ export const ClientsView: React.FC<ClientsViewProps> = ({
           </p>
         </div>
 
-          <button
+        {canManage && <button
             type="button"
             onClick={openNewModal}
             className="px-4 lg:px-5 py-2 lg:py-2.5 rounded-xl bg-[#0056d6] hover:bg-[#004dc0] active:bg-[#003ca0] text-white text-xs lg:text-sm font-bold border border-blue-400/25 transition-all duration-150 active:scale-[0.98] flex items-center justify-center gap-2 cursor-pointer shrink-0 select-none"
           >
             <Plus className="w-4 h-4 stroke-[2.5]" />
             <span className="lg:inline">Novo</span>
-          </button>
+        </button>}
       </div>
 
       {/* Barra de Pesquisa */}
@@ -291,20 +295,20 @@ export const ClientsView: React.FC<ClientsViewProps> = ({
                             >
                               <FileText className="w-4 h-4" />
                             </button>
-                            <button
+                            {canManage && <button
                               onClick={() => openEditModal(client)}
                               className="p-2 rounded-lg text-slate-500 hover:text-[#0a1e42] hover:bg-slate-100 transition-colors cursor-pointer"
                               title="Editar cliente"
                             >
                               <Edit className="w-4 h-4" />
-                            </button>
-                            <button
+                            </button>}
+                            {canDelete && <button
                               onClick={() => onDeleteClient(client.id)}
                               className="p-2 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer"
                               title="Eliminar cliente"
                             >
                               <Trash2 className="w-4 h-4" />
-                            </button>
+                            </button>}
                           </div>
                         </td>
                       </tr>
@@ -347,14 +351,22 @@ export const ClientsView: React.FC<ClientsViewProps> = ({
                       >
                         <FileText className="w-4 h-4" />
                       </button>
-                      <button
+                      {canManage && <button
                         type="button"
                         onClick={() => openEditModal(client)}
                         aria-label={`Editar ${client.name}`}
                         className="p-2 rounded-lg text-slate-500 hover:bg-slate-100 active:bg-slate-200"
                       >
                         <Edit className="w-4 h-4" />
-                      </button>
+                      </button>}
+                      {canDelete && <button
+                        type="button"
+                        onClick={() => onDeleteClient(client.id)}
+                        aria-label={`Eliminar ${client.name}`}
+                        className="p-2 rounded-lg text-rose-600 hover:bg-rose-50 active:bg-rose-100"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>}
                     </div>
                   </div>
                 </div>

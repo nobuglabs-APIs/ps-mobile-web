@@ -12,6 +12,7 @@ interface BottomNavProps {
   activeTab: ActiveTab;
   onNavigate: (tab: ActiveTab) => void;
   onNewInvoice: () => void;
+  canCreateInvoice: boolean;
 }
 
 const tabs: Array<{ id: ActiveTab; label: string; icon: React.ReactNode }> = [
@@ -25,6 +26,7 @@ export const BottomNav: React.FC<BottomNavProps> = ({
   activeTab,
   onNavigate,
   onNewInvoice,
+  canCreateInvoice,
 }) => {
   const isActive = (tab: ActiveTab) =>
     activeTab === tab ||
@@ -39,7 +41,7 @@ export const BottomNav: React.FC<BottomNavProps> = ({
         {tabs.map((tab, i) => (
           <React.Fragment key={tab.id}>
             {/* Insert FAB before 3rd tab */}
-            {i === 2 && (
+            {i === 2 && canCreateInvoice && (
               <button
                 type="button"
                 onClick={onNewInvoice}

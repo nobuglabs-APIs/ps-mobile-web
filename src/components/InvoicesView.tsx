@@ -28,6 +28,9 @@ interface InvoicesViewProps {
   onDeleteInvoice: (invoiceId: string) => Promise<boolean>;
   clientFilter?: string;
   onClearClientFilter?: () => void;
+  canCreate: boolean;
+  canEdit: boolean;
+  canDelete: boolean;
 }
 
 type FilterTab = 'Todas' | 'Pagas' | 'Pendentes' | 'Vencidas' | 'Rascunhos' | 'Canceladas';
@@ -89,6 +92,9 @@ export const InvoicesView: React.FC<InvoicesViewProps> = ({
   onDeleteInvoice,
   clientFilter = '',
   onClearClientFilter,
+  canCreate,
+  canEdit,
+  canDelete,
 }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [activeFilter, setActiveFilter] = useState<FilterTab>('Todas');
@@ -229,14 +235,14 @@ export const InvoicesView: React.FC<InvoicesViewProps> = ({
           </p>
         </div>
 
-          <button
+          {canCreate && <button
             type="button"
             onClick={onNewInvoice}
             className="px-4 lg:px-5 py-2 lg:py-2.5 rounded-xl bg-[#0056d6] hover:bg-[#004dc0] active:bg-[#003ca0] text-white text-xs lg:text-sm font-bold border border-blue-400/25 transition-all duration-150 active:scale-[0.98] flex items-center justify-center gap-2 cursor-pointer shrink-0 select-none"
           >
           <Plus className="w-4 h-4 stroke-[2.5]" />
           <span>Nova Fatura</span>
-        </button>
+        </button>}
       </div>
 
       {/* Barra de Pesquisa e Filtros */}
@@ -319,7 +325,7 @@ export const InvoicesView: React.FC<InvoicesViewProps> = ({
               ? 'Tenta alterar o termo de pesquisa ou escolher outro estado.'
               : 'Emita a primeira fatura para começar a acompanhar os seus documentos comerciais.'}
           </p>
-          {!searchTerm && activeFilter === 'Todas' && !clientFilter && (
+          {canCreate && !searchTerm && activeFilter === 'Todas' && !clientFilter && (
             <button
               type="button"
               onClick={onNewInvoice}
@@ -419,20 +425,20 @@ export const InvoicesView: React.FC<InvoicesViewProps> = ({
                           >
                             <Eye className="w-4 h-4" />
                           </button>
-                          <button
+                          {canEdit && <button
                             onClick={() => onEditInvoice(inv)}
                             className="p-2 rounded-lg text-slate-500 hover:text-[#0a1e42] hover:bg-slate-100 transition-colors cursor-pointer"
                             title="Editar dados"
                           >
                             <Edit className="w-4 h-4" />
-                          </button>
-                          <button
+                          </button>}
+                          {canCreate && <button
                             onClick={() => onDuplicateInvoice(inv)}
                             className="p-2 rounded-lg text-slate-500 hover:text-[#d49419] hover:bg-amber-50 transition-colors cursor-pointer"
                             title="Duplicar com nova numeração"
                           >
                             <Copy className="w-4 h-4" />
-                          </button>
+                          </button>}
                           <button
                             onClick={() => handlePrint(inv)}
                             className="p-2 rounded-lg text-slate-500 hover:text-indigo-600 hover:bg-indigo-50 transition-colors cursor-pointer"
@@ -440,7 +446,7 @@ export const InvoicesView: React.FC<InvoicesViewProps> = ({
                           >
                             <Printer className="w-4 h-4" />
                           </button>
-                          {inv.status !== 'Cancelada' && (
+                          {canDelete && inv.status !== 'Cancelada' && (
                             <button
                               onClick={() => setDeleteConfirmId(inv.id)}
                               className="p-2 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer"
