@@ -23,8 +23,9 @@ import {
   CreditCard,
   PenTool,
   Loader2,
+  XCircle,
 } from 'lucide-react';
-import { Invoice, CompanyInfo, DocumentType } from '../types';
+import { Invoice, CompanyInfo, DocumentType, InvoiceStatus } from '../types';
 import { formatKz, formatKzDecimal, numberToKzWords } from '../utils/formatters';
 import { downloadInvoicePdf, invoiceFileName } from '../utils/pdfExport';
 
@@ -36,7 +37,7 @@ interface InvoiceA4ViewProps {
   onBack: () => void;
   onEdit: (invoice: Invoice) => void;
   onNewInvoice: () => void;
-  onToggleStatus?: (invoiceId: string, newStatus: 'Paga' | 'Pendente') => void;
+  onToggleStatus?: (invoiceId: string, newStatus: InvoiceStatus) => void;
 }
 
 function getDocumentTypeName(type?: DocumentType): string {
@@ -157,6 +158,7 @@ export const InvoiceA4View: React.FC<InvoiceA4ViewProps> = ({
   };
 
   const dateParts = getDateParts(invoice.date);
+  const isCancelled = invoice.status === 'Cancelada';
 
   /* ════════════════════════════════════════════════════════════════════
      MOBILE LAYOUT — clean native cards, no scaled A4
@@ -177,7 +179,12 @@ export const InvoiceA4View: React.FC<InvoiceA4ViewProps> = ({
           <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-blue-50 text-[#0056d6] border border-blue-200 uppercase">
             {getDocTypeShort(invoice.docType)}
           </span>
-          {invoice.status === 'Paga' || (invoice.docType === 'orcamento' && invoice.status === 'Paga') ? (
+          {isCancelled ? (
+            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-rose-50 text-rose-700">
+              <XCircle className="w-3 h-3" />
+              Cancelada
+            </span>
+          ) : invoice.status === 'Paga' || (invoice.docType === 'orcamento' && invoice.status === 'Paga') ? (
             <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700">
               <CheckCircle2 className="w-3 h-3" />
               {invoice.docType === 'orcamento' ? 'Aprovado' : 'Paga'}
@@ -371,7 +378,7 @@ export const InvoiceA4View: React.FC<InvoiceA4ViewProps> = ({
       {/* Sticky mobile action bar */}
       <div className="fixed bottom-16 left-0 right-0 z-40 bg-white/95 backdrop-blur-md border-t border-slate-200 px-3 py-2 safe-area-pb">
         <div className="flex gap-2">
-          {onToggleStatus && (
+          {onToggleStatus && !isCancelled && (
             <button
               onClick={() => onToggleStatus(invoice.id, invoice.status === 'Paga' ? 'Pendente' : 'Paga')}
               className={`flex-1 py-2.5 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition-colors cursor-pointer ${
@@ -384,13 +391,15 @@ export const InvoiceA4View: React.FC<InvoiceA4ViewProps> = ({
               {invoice.status === 'Paga' ? 'Pendente' : 'Paga'}
             </button>
           )}
-          <button
-            onClick={() => onEdit(invoice)}
-            className="flex-1 py-2.5 rounded-xl text-xs font-bold bg-slate-100 text-slate-700 flex items-center justify-center gap-1.5 cursor-pointer"
-          >
-            <Edit className="w-3.5 h-3.5" />
-            Editar
-          </button>
+          {!isCancelled && (
+            <button
+              onClick={() => onEdit(invoice)}
+              className="flex-1 py-2.5 rounded-xl text-xs font-bold bg-slate-100 text-slate-700 flex items-center justify-center gap-1.5 cursor-pointer"
+            >
+              <Edit className="w-3.5 h-3.5" />
+              Editar
+            </button>
+          )}
           <button
             onClick={handlePrint}
             className="flex-1 py-2.5 rounded-xl text-xs font-bold bg-slate-100 text-slate-700 flex items-center justify-center gap-1.5 cursor-pointer"
@@ -433,7 +442,12 @@ export const InvoiceA4View: React.FC<InvoiceA4ViewProps> = ({
             </span>
             <span className="font-black text-[#0a1e42] text-sm sm:text-base">{invoice.number}</span>
           </div>
-          {invoice.status === 'Paga' ? (
+          {isCancelled ? (
+            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold bg-rose-50 text-rose-700 border border-rose-200">
+              <XCircle className="w-3.5 h-3.5" />
+              Cancelada
+            </span>
+          ) : invoice.status === 'Paga' ? (
             <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
               <CheckCircle2 className="w-3.5 h-3.5" />
               {invoice.docType === 'orcamento' ? 'Aprovado' : 'Paga'}
@@ -446,7 +460,7 @@ export const InvoiceA4View: React.FC<InvoiceA4ViewProps> = ({
           )}
         </div>
         <div className="flex flex-col sm:flex-row sm:flex-wrap items-stretch sm:items-center gap-2 w-full sm:w-auto">
-          {onToggleStatus && (
+          {onToggleStatus && !isCancelled && (
             <button
               onClick={() => onToggleStatus(invoice.id, invoice.status === 'Paga' ? 'Pendente' : 'Paga')}
               className={`inline-flex w-full sm:w-auto items-center justify-center gap-1.5 px-3 py-2.5 sm:py-2 rounded-xl text-xs font-bold transition-colors cursor-pointer ${
@@ -456,9 +470,11 @@ export const InvoiceA4View: React.FC<InvoiceA4ViewProps> = ({
               {invoice.status === 'Paga' ? <><Clock className="w-3.5 h-3.5" /><span>Marcar Pendente</span></> : <><CheckCircle2 className="w-3.5 h-3.5" /><span>Marcar Paga</span></>}
             </button>
           )}
-          <button onClick={() => onEdit(invoice)} className="inline-flex w-full sm:w-auto items-center justify-center gap-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 px-3.5 py-2.5 sm:py-2 rounded-xl text-xs font-bold transition-colors cursor-pointer">
-            <Edit className="w-3.5 h-3.5 text-slate-600" /><span>Editar</span>
-          </button>
+          {!isCancelled && (
+            <button onClick={() => onEdit(invoice)} className="inline-flex w-full sm:w-auto items-center justify-center gap-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 px-3.5 py-2.5 sm:py-2 rounded-xl text-xs font-bold transition-colors cursor-pointer">
+              <Edit className="w-3.5 h-3.5 text-slate-600" /><span>Editar</span>
+            </button>
+          )}
           <button onClick={handlePrint} className="inline-flex w-full sm:w-auto items-center justify-center gap-1.5 bg-slate-100 hover:bg-slate-200 text-slate-800 px-3.5 py-2.5 sm:py-2 rounded-xl text-xs font-bold transition-colors cursor-pointer">
             <Printer className="w-3.5 h-3.5 text-slate-600" /><span>Imprimir</span>
           </button>

@@ -17,8 +17,8 @@ import { Select } from './Select';
 
 interface ProductsServicesViewProps {
   products: ProductService[];
-  onAddProduct: (product: ProductService) => void;
-  onUpdateProduct: (product: ProductService) => void;
+  onAddProduct: (product: ProductService) => Promise<boolean>;
+  onUpdateProduct: (product: ProductService) => Promise<boolean>;
   onDeleteProduct: (productId: string) => void;
 }
 
@@ -32,6 +32,7 @@ export const ProductsServicesView: React.FC<ProductsServicesViewProps> = ({
   const [filterCategory, setFilterCategory] = useState<'Todos' | 'Serviço' | 'Produto'>('Todos');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<ProductService | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
 
   // Form state
   const [name, setName] = useState('');
@@ -63,12 +64,14 @@ export const ProductsServicesView: React.FC<ProductsServicesViewProps> = ({
     setIsModalOpen(true);
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name.trim()) return;
+    if (!name.trim() || isSaving) return;
 
+    setIsSaving(true);
+    let saved: boolean;
     if (editingProduct) {
-      onUpdateProduct({
+      saved = await onUpdateProduct({
         ...editingProduct,
         name: name.trim(),
         description: description.trim(),
@@ -79,7 +82,7 @@ export const ProductsServicesView: React.FC<ProductsServicesViewProps> = ({
         unit,
       });
     } else {
-      onAddProduct({
+      saved = await onAddProduct({
         id: `p-${Date.now()}`,
         name: name.trim(),
         description: description.trim(),
@@ -91,7 +94,8 @@ export const ProductsServicesView: React.FC<ProductsServicesViewProps> = ({
       });
     }
 
-    setIsModalOpen(false);
+    setIsSaving(false);
+    if (saved) setIsModalOpen(false);
   };
 
   const filteredProducts = products.filter((p) => {
@@ -317,6 +321,14 @@ export const ProductsServicesView: React.FC<ProductsServicesViewProps> = ({
                         <span className="text-xs text-slate-400 whitespace-nowrap">{formatKz(p.price)}</span>
                       </div>
                     </div>
+                    <button
+                      type="button"
+                      onClick={() => openEditModal(p)}
+                      aria-label={`Editar ${p.name}`}
+                      className="p-2 rounded-lg text-slate-500 hover:bg-slate-100 active:bg-slate-200 shrink-0"
+                    >
+                      <Edit className="w-4 h-4" />
+                    </button>
                   </div>
                 </div>
               );
@@ -327,10 +339,10 @@ export const ProductsServicesView: React.FC<ProductsServicesViewProps> = ({
 
       {/* Modal Adicionar / Editar Produto/Serviço */}
       {isModalOpen && (
-        <div className="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl p-6 sm:p-8 max-w-lg w-full shadow-2xl border border-slate-200 animate-in fade-in zoom-in-95">
+        <div className="modal-backdrop fixed inset-0 z-50 bg-slate-900/45 backdrop-blur-xs flex items-center justify-center p-4" role="presentation">
+          <div role="dialog" aria-modal="true" aria-labelledby="product-modal-title" className="modal-panel bg-white rounded-3xl p-6 sm:p-8 max-w-lg w-full max-h-[calc(100dvh-2rem)] overflow-y-auto shadow-2xl border border-slate-200">
             <div className="flex items-center justify-between pb-4 border-b border-slate-100">
-              <h3 className="text-lg font-extrabold text-[#0a1e42]">
+              <h3 id="product-modal-title" className="text-lg font-extrabold text-[#0a1e42]">
                 {editingProduct ? 'Editar Item' : 'Novo Produto / Serviço'}
               </h3>
               <button
@@ -451,9 +463,10 @@ export const ProductsServicesView: React.FC<ProductsServicesViewProps> = ({
                 </button>
                 <button
                   type="submit"
+                  disabled={isSaving}
                   className="px-5 py-2.5 rounded-xl bg-[#0056d6] hover:bg-[#0047b3] text-white text-xs font-bold transition-colors cursor-pointer"
                 >
-                  {editingProduct ? 'Guardar Alterações' : 'Adicionar ao Catálogo'}
+                  {isSaving ? 'A guardar...' : editingProduct ? 'Guardar Alterações' : 'Adicionar ao Catálogo'}
                 </button>
               </div>
             </form>

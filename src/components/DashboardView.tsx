@@ -55,21 +55,21 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   onNavigateToInvoices,
 }) => {
   // 1. Cálculos dos Indicadores
-  const totalInvoiced = invoices.reduce((acc, inv) => acc + (inv.total || 0), 0);
+  const billableInvoices = invoices.filter(
+    (inv) => inv.status === 'Paga' || inv.status === 'Pendente' || inv.status === 'Vencida'
+  );
+  const totalInvoiced = billableInvoices.reduce((acc, inv) => acc + (inv.total || 0), 0);
   const paidInvoices = invoices.filter((inv) => inv.status === 'Paga');
   const totalPaid = paidInvoices.reduce((acc, inv) => acc + (inv.total || 0), 0);
   const pendingInvoices = invoices.filter((inv) => inv.status === 'Pendente');
   const totalPending = pendingInvoices.reduce((acc, inv) => acc + (inv.total || 0), 0);
 
   // Faturas deste mês (considerando o mês mais recente das faturas ou corrente)
-  const currentMonthInvoices = invoices.filter((inv) => {
-    // Verificar formato DD/MM/YYYY
-    if (inv.date && inv.date.includes('/')) {
-      const parts = inv.date.split('/');
-      // Se for do ano corrente/recente
-      return parts.length === 3;
-    }
-    return true;
+  const currentMonthInvoices = billableInvoices.filter((inv) => {
+    const parts = inv.date.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+    if (!parts) return false;
+    const now = new Date();
+    return Number(parts[2]) === now.getMonth() + 1 && Number(parts[3]) === now.getFullYear();
   });
   const monthInvoiced = currentMonthInvoices.reduce(
     (acc, inv) => acc + (inv.total || 0),
@@ -106,6 +106,13 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
           <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold bg-rose-50 text-rose-700 border border-rose-200">
             <span className="w-1.5 h-1.5 rounded-full bg-rose-500" />
             Vencida
+          </span>
+        );
+      case 'Cancelada':
+        return (
+          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold bg-rose-50 text-rose-700 border border-rose-200">
+            <span className="w-1.5 h-1.5 rounded-full bg-rose-500" />
+            Cancelada
           </span>
         );
       case 'Rascunho':

@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   Plus,
   Search,
@@ -14,6 +14,7 @@ import {
   ClipboardList,
   PenLine,
   Inbox,
+  X,
 } from 'lucide-react';
 import { Invoice, InvoiceStatus, DocumentType } from '../types';
 import { formatKz } from '../utils/formatters';
@@ -24,10 +25,12 @@ interface InvoicesViewProps {
   onViewInvoice: (invoice: Invoice) => void;
   onEditInvoice: (invoice: Invoice) => void;
   onDuplicateInvoice: (invoice: Invoice) => void;
-  onDeleteInvoice: (invoiceId: string) => void;
+  onDeleteInvoice: (invoiceId: string) => Promise<boolean>;
+  clientFilter?: string;
+  onClearClientFilter?: () => void;
 }
 
-type FilterTab = 'Todas' | 'Pagas' | 'Pendentes' | 'Vencidas' | 'Rascunhos';
+type FilterTab = 'Todas' | 'Pagas' | 'Pendentes' | 'Vencidas' | 'Rascunhos' | 'Canceladas';
 
 function getDocTypeLabel(type?: DocumentType): string {
   switch (type) {
@@ -84,11 +87,14 @@ export const InvoicesView: React.FC<InvoicesViewProps> = ({
   onEditInvoice,
   onDuplicateInvoice,
   onDeleteInvoice,
+  clientFilter = '',
+  onClearClientFilter,
 }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [activeFilter, setActiveFilter] = useState<FilterTab>('Todas');
   const [currentPage, setCurrentPage] = useState(1);
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
+  const [isCancelling, setIsCancelling] = useState(false);
 
   const ITEMS_PER_PAGE = 8;
 
@@ -106,16 +112,21 @@ export const InvoicesView: React.FC<InvoicesViewProps> = ({
 
       if (!matchesSearch) return false;
 
+      const matchesClient =
+        !clientFilter || inv.clientName.trim().toLocaleLowerCase() === clientFilter.trim().toLocaleLowerCase();
+      if (!matchesClient) return false;
+
       // Filtro de Estado
       if (activeFilter === 'Todas') return true;
       if (activeFilter === 'Pagas') return inv.status === 'Paga';
       if (activeFilter === 'Pendentes') return inv.status === 'Pendente';
       if (activeFilter === 'Vencidas') return inv.status === 'Vencida';
       if (activeFilter === 'Rascunhos') return inv.status === 'Rascunho';
+      if (activeFilter === 'Canceladas') return inv.status === 'Cancelada';
 
       return true;
     });
-  }, [invoices, searchTerm, activeFilter]);
+  }, [invoices, searchTerm, activeFilter, clientFilter]);
 
   // Ordenação: mais recentes primeiro (por data de criação/emissão)
   const sortedInvoices = useMemo(() => {
@@ -135,6 +146,10 @@ export const InvoicesView: React.FC<InvoicesViewProps> = ({
 
   // Se os filtros reduzem o total, repõe a página
   const safePage = Math.min(currentPage, totalPages);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [clientFilter]);
 
   const handleFilterChange = (filter: FilterTab) => {
     setActiveFilter(filter);
@@ -171,6 +186,13 @@ export const InvoicesView: React.FC<InvoicesViewProps> = ({
             Vencida
           </span>
         );
+      case 'Cancelada':
+        return (
+          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold bg-rose-50 text-rose-700 border border-rose-200 whitespace-nowrap">
+            <span className="w-1.5 h-1.5 rounded-full bg-rose-500" />
+            Cancelada
+          </span>
+        );
       case 'Rascunho':
       default:
         return (
@@ -189,6 +211,7 @@ export const InvoicesView: React.FC<InvoicesViewProps> = ({
     Pendentes: invoices.filter((i) => i.status === 'Pendente').length,
     Vencidas: invoices.filter((i) => i.status === 'Vencida').length,
     Rascunhos: invoices.filter((i) => i.status === 'Rascunho').length,
+    Canceladas: invoices.filter((i) => i.status === 'Cancelada').length,
   };
 
   const deleteTarget = deleteConfirmId
@@ -235,7 +258,7 @@ export const InvoicesView: React.FC<InvoicesViewProps> = ({
 
         {/* Filtros por Estado */}
         <div className="flex items-center gap-1.5 overflow-x-auto pb-1 text-xs font-semibold no-scrollbar">
-          {(['Todas', 'Pagas', 'Pendentes', 'Vencidas', 'Rascunhos'] as FilterTab[]).map(
+          {(['Todas', 'Pagas', 'Pendentes', 'Vencidas', 'Rascunhos', 'Canceladas'] as FilterTab[]).map(
             (tab) => {
               const isActive = activeFilter === tab;
               return (
@@ -264,6 +287,20 @@ export const InvoicesView: React.FC<InvoicesViewProps> = ({
             }
           )}
         </div>
+        {clientFilter && (
+          <div className="flex items-center justify-between gap-3 rounded-xl border border-blue-100 bg-blue-50 px-3 py-2 text-xs text-[#0a1e42]">
+            <span className="min-w-0 truncate">
+              A mostrar documentos de <strong>{clientFilter}</strong>
+            </span>
+            <button
+              type="button"
+              onClick={onClearClientFilter}
+              className="inline-flex shrink-0 items-center gap-1 rounded-lg px-2 py-1 font-bold text-[#0056d6] hover:bg-white"
+            >
+              <X className="w-3.5 h-3.5" /> Limpar
+            </button>
+          </div>
+        )}
       </div>
 
       {sortedInvoices.length === 0 ? (
@@ -273,16 +310,16 @@ export const InvoicesView: React.FC<InvoicesViewProps> = ({
             <Inbox className="w-8 h-8" />
           </div>
           <h3 className="mt-4 text-base font-bold text-slate-800">
-            {searchTerm || activeFilter !== 'Todas'
+            {searchTerm || activeFilter !== 'Todas' || clientFilter
               ? 'Nenhum documento corresponde aos filtros'
               : 'Ainda não existem faturas'}
           </h3>
           <p className="mt-1 text-xs text-slate-500 max-w-sm mx-auto">
-            {searchTerm || activeFilter !== 'Todas'
+            {searchTerm || activeFilter !== 'Todas' || clientFilter
               ? 'Tenta alterar o termo de pesquisa ou escolher outro estado.'
               : 'Emita a primeira fatura para começar a acompanhar os seus documentos comerciais.'}
           </p>
-          {!searchTerm && activeFilter === 'Todas' && (
+          {!searchTerm && activeFilter === 'Todas' && !clientFilter && (
             <button
               type="button"
               onClick={onNewInvoice}
@@ -403,13 +440,16 @@ export const InvoicesView: React.FC<InvoicesViewProps> = ({
                           >
                             <Printer className="w-4 h-4" />
                           </button>
-                          <button
-                            onClick={() => setDeleteConfirmId(inv.id)}
-                            className="p-2 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer"
-                            title="Eliminar"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </button>
+                          {inv.status !== 'Cancelada' && (
+                            <button
+                              onClick={() => setDeleteConfirmId(inv.id)}
+                              className="p-2 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer"
+                              title="Anular documento"
+                              aria-label={`Anular ${inv.number}`}
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          )}
                         </div>
                       </td>
                     </tr>
@@ -473,41 +513,47 @@ export const InvoicesView: React.FC<InvoicesViewProps> = ({
         </>
       )}
 
-      {/* Modal de Confirmação de Eliminação */}
+      {/* Modal de confirmação de anulação */}
       {deleteConfirmId && (
-        <div className="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl p-6 max-w-sm w-full shadow-2xl border border-slate-200 space-y-4 animate-in fade-in zoom-in-95">
+        <div className="modal-backdrop fixed inset-0 z-50 bg-slate-900/45 backdrop-blur-xs flex items-center justify-center p-4" role="presentation">
+          <div role="dialog" aria-modal="true" aria-labelledby="cancel-invoice-title" className="modal-panel bg-white rounded-2xl p-6 max-w-sm w-full shadow-2xl border border-slate-200 space-y-4">
             <div className="w-12 h-12 rounded-full bg-rose-50 text-rose-600 flex items-center justify-center mx-auto">
               <Trash2 className="w-6 h-6" />
             </div>
             <div className="text-center">
-              <h3 className="text-base font-extrabold text-slate-900">Eliminar fatura?</h3>
+              <h3 id="cancel-invoice-title" className="text-base font-extrabold text-slate-900">Anular documento?</h3>
               <p className="text-xs text-slate-500 mt-1">
                 {deleteTarget ? (
                   <>
                     <span className="font-bold text-slate-700">{deleteTarget.number}</span>{' '}
-                    — {deleteTarget.clientName}. Esta ação não pode ser revertida.
+                    — {deleteTarget.clientName}. O documento será mantido no histórico como cancelado.
                   </>
                 ) : (
-                  'Esta ação não pode ser revertida.'
+                  'O documento será mantido no histórico como cancelado.'
                 )}
               </p>
             </div>
             <div className="flex items-center gap-2 pt-2">
               <button
+                type="button"
                 onClick={() => setDeleteConfirmId(null)}
+                disabled={isCancelling}
                 className="flex-1 py-2.5 rounded-xl border border-slate-200 hover:bg-slate-100 text-slate-700 text-xs font-bold transition-colors cursor-pointer"
               >
                 Cancelar
               </button>
               <button
-                onClick={() => {
-                  onDeleteInvoice(deleteConfirmId);
-                  setDeleteConfirmId(null);
+                type="button"
+                disabled={isCancelling}
+                onClick={async () => {
+                  setIsCancelling(true);
+                  const cancelled = await onDeleteInvoice(deleteConfirmId);
+                  setIsCancelling(false);
+                  if (cancelled) setDeleteConfirmId(null);
                 }}
-                className="flex-1 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold transition-colors cursor-pointer"
+                className="flex-1 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold transition-colors cursor-pointer disabled:cursor-wait disabled:opacity-60"
               >
-                Sim, Eliminar
+                {isCancelling ? 'A anular...' : 'Sim, Anular'}
               </button>
             </div>
           </div>

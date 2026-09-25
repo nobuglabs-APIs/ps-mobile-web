@@ -62,6 +62,8 @@ export const DashboardAnalytics: React.FC<DashboardAnalyticsProps> = ({ invoices
           overdueAmount += val;
           overdueCount += 1;
           break;
+        case 'Cancelada':
+          break;
         case 'Rascunho':
         default:
           draftAmount += val;
@@ -135,11 +137,14 @@ export const DashboardAnalytics: React.FC<DashboardAnalyticsProps> = ({ invoices
     ];
 
     // Integrar valores reais das faturas atuais emitidas no mês de Setembro/recente
-    const currentActualInvoiced = invoices.reduce((acc, inv) => acc + (Number(inv.total) || 0), 0);
-    const currentActualPaid = invoices
+    const billableInvoices = invoices.filter(
+      (inv) => inv.status === 'Paga' || inv.status === 'Pendente' || inv.status === 'Vencida'
+    );
+    const currentActualInvoiced = billableInvoices.reduce((acc, inv) => acc + (Number(inv.total) || 0), 0);
+    const currentActualPaid = billableInvoices
       .filter((inv) => inv.status === 'Paga')
       .reduce((acc, inv) => acc + (Number(inv.total) || 0), 0);
-    const currentActualPending = invoices
+    const currentActualPending = billableInvoices
       .filter((inv) => inv.status === 'Pendente' || inv.status === 'Vencida')
       .reduce((acc, inv) => acc + (Number(inv.total) || 0), 0);
 
@@ -154,7 +159,7 @@ export const DashboardAnalytics: React.FC<DashboardAnalyticsProps> = ({ invoices
           faturado: fat,
           recebido: rec,
           pendente: Math.max(pend, currentActualPending),
-          count: Math.max(m.count, invoices.length),
+          count: Math.max(m.count, billableInvoices.length),
         };
       }
       return m;

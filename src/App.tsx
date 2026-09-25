@@ -45,6 +45,7 @@ import {
   deactivateProduct,
   listSales,
   createSale,
+  updateSale,
   issueSale,
   paySale,
   cancelSale,
@@ -148,6 +149,7 @@ export default function App() {
 
   // 8. Navegação Principal
   const [activeTab, setActiveTab] = useState<ActiveTab>('dashboard');
+  const [invoiceClientFilter, setInvoiceClientFilter] = useState('');
 
   // 8. Documento em visualização A4
   const [selectedInvoiceForA4, setSelectedInvoiceForA4] = useState<Invoice | null>(null);
@@ -207,6 +209,7 @@ export default function App() {
     setSelectedInvoiceForA4(null);
     setSuccessInvoice(null);
     setEditingInvoice(null);
+    setInvoiceClientFilter('');
     setActiveTab(tab);
   };
 
@@ -253,8 +256,14 @@ export default function App() {
   // Persiste a fatura no ERP e atualiza o estado local
   const persistSale = async (invoice: Invoice, emit: boolean): Promise<Invoice | null> => {
     const { id: clientId, created } = await resolveClientId(invoice);
-    const createdSale = await createSale(invoice, clientId);
-    const final = emit ? await issueSale(createdSale.id) : createdSale;
+    const alreadyExists = invoices.some((existing) => existing.id === invoice.id);
+    const savedSale = alreadyExists
+      ? await updateSale(invoice.id, invoice, clientId)
+      : await createSale(invoice, clientId);
+    // A emissão só é necessária para documentos novos ou rascunhos existentes.
+    const final = emit && (!alreadyExists || invoice.status === 'Rascunho')
+      ? await issueSale(savedSale.id)
+      : savedSale;
     const clientsForMapping = created ? [...clients, created] : clients;
     const refreshed = attachClientInfo([final], clientsForMapping);
     return refreshed[0] || null;
@@ -320,12 +329,16 @@ export default function App() {
     try {
       await cancelSale(invoiceId, 'Anulado a partir do PS Faturas');
     } catch {
-      /* mantém o registo no ERP (trilha de auditoria) */
+      alert('Não foi possível anular o documento no ERP.');
+      return false;
     }
-    setInvoices((prev) => prev.filter((i) => i.id !== invoiceId));
+    setInvoices((prev) => prev.map((invoice) =>
+      invoice.id === invoiceId ? { ...invoice, status: 'Cancelada' } : invoice
+    ));
     if (selectedInvoiceForA4 && selectedInvoiceForA4.id === invoiceId) {
-      setSelectedInvoiceForA4(null);
+      setSelectedInvoiceForA4((invoice) => invoice ? { ...invoice, status: 'Cancelada' } : null);
     }
+    return true;
   };
 
   const handleDuplicateInvoice = (invoice: Invoice) => {
@@ -341,7 +354,6 @@ export default function App() {
       status: 'Pendente',
       createdAt: new Date().toISOString(),
     };
-    setInvoices((prev) => [duplicated, ...prev]);
     setEditingInvoice(duplicated);
     setSelectedInvoiceForA4(null);
     setSuccessInvoice(null);
@@ -356,7 +368,8 @@ export default function App() {
         try {
           await paySale(inv.id, inv.total || 0, 'TRANSFERENCIA');
         } catch {
-          /* continua localmente se o pagamento falhar */
+          alert('Não foi possível registar o pagamento no ERP.');
+          return;
         }
       }
     }
@@ -373,8 +386,10 @@ export default function App() {
     try {
       const created = await createClient(client);
       setClients((prev) => [...prev, created]);
+      return true;
     } catch (err: any) {
       alert(`Não foi possível criar o cliente no ERP: ${err?.message || 'erro desconhecido'}`);
+      return false;
     }
   };
 
@@ -382,8 +397,10 @@ export default function App() {
     try {
       const updated = await updateClient(updatedClient.id, updatedClient);
       setClients((prev) => prev.map((c) => (c.id === updated.id ? updated : c)));
+      return true;
     } catch (err: any) {
       alert(`Não foi possível atualizar o cliente no ERP: ${err?.message || 'erro desconhecido'}`);
+      return false;
     }
   };
 
@@ -391,7 +408,8 @@ export default function App() {
     try {
       await deactivateClient(clientId);
     } catch {
-      /* remove localmente na mesma */
+      alert('Não foi possível desativar o cliente no ERP.');
+      return;
     }
     setClients((prev) => prev.filter((c) => c.id !== clientId));
   };
@@ -399,6 +417,7 @@ export default function App() {
   const handleViewClientInvoices = (clientName: string) => {
     setSelectedInvoiceForA4(null);
     setSuccessInvoice(null);
+    setInvoiceClientFilter(clientName);
     setActiveTab('faturas');
   };
 
@@ -407,8 +426,10 @@ export default function App() {
     try {
       const created = await createProduct(product);
       setProducts((prev) => [...prev, created]);
+      return true;
     } catch (err: any) {
       alert(`Não foi possível criar o produto no ERP: ${err?.message || 'erro desconhecido'}`);
+      return false;
     }
   };
 
@@ -416,8 +437,10 @@ export default function App() {
     try {
       const updated = await updateProduct(updatedProduct.id, updatedProduct);
       setProducts((prev) => prev.map((p) => (p.id === updated.id ? updated : p)));
+      return true;
     } catch (err: any) {
       alert(`Não foi possível atualizar o produto no ERP: ${err?.message || 'erro desconhecido'}`);
+      return false;
     }
   };
 
@@ -425,7 +448,8 @@ export default function App() {
     try {
       await deactivateProduct(productId);
     } catch {
-      /* remove localmente na mesma */
+      alert('Não foi possível desativar o produto no ERP.');
+      return;
     }
     setProducts((prev) => prev.filter((p) => p.id !== productId));
   };
@@ -444,6 +468,7 @@ export default function App() {
     setSelectedInvoiceForA4(null);
     setSuccessInvoice(null);
     setEditingInvoice(null);
+    setInvoiceClientFilter('');
     setIsAuthenticated(false);
   };
 
@@ -457,7 +482,7 @@ export default function App() {
   }
 
   return (
-    <div className="min-h-screen bg-[#f8fafc] text-slate-800 flex selection:bg-[#0056d6] selection:text-white">
+    <div className="min-h-screen app-surface text-slate-800 flex selection:bg-[#0056d6] selection:text-white">
       {/* Sidebar Lateral (desktop only) */}
       <Sidebar
         activeTab={activeTab}
@@ -541,7 +566,10 @@ export default function App() {
                   invoices={invoices}
                   onNewInvoice={handleStartNewInvoice}
                   onViewInvoice={handleViewInvoice}
-                  onNavigateToInvoices={() => setActiveTab('faturas')}
+                  onNavigateToInvoices={() => {
+                    setInvoiceClientFilter('');
+                    setActiveTab('faturas');
+                  }}
                 />
               )}
 
@@ -553,6 +581,8 @@ export default function App() {
                   onEditInvoice={handleStartEdit}
                   onDuplicateInvoice={handleDuplicateInvoice}
                   onDeleteInvoice={handleDeleteInvoice}
+                  clientFilter={invoiceClientFilter}
+                  onClearClientFilter={() => setInvoiceClientFilter('')}
                 />
               )}
 

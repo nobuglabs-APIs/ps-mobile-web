@@ -54,7 +54,7 @@ interface InvoiceFormViewProps {
   onGenerateInvoice: (invoice: Invoice) => void;
   onSaveDraft: (invoice: Invoice) => void;
   onPreviewInvoice?: (invoice: Invoice) => void;
-  onQuickAddClient?: (client: Client) => void;
+  onQuickAddClient?: (client: Client) => boolean | void | Promise<boolean | void>;
   onCancelEdit?: () => void;
 }
 
@@ -174,7 +174,7 @@ export const InvoiceFormView: React.FC<InvoiceFormViewProps> = ({
   };
 
   // Criar cliente rápido
-  const handleSaveQuickClient = (e: React.FormEvent) => {
+  const handleSaveQuickClient = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!quickClientName.trim()) return;
 
@@ -191,7 +191,8 @@ export const InvoiceFormView: React.FC<InvoiceFormViewProps> = ({
     };
 
     if (onQuickAddClient) {
-      onQuickAddClient(newClient);
+      const saved = await onQuickAddClient(newClient);
+      if (saved === false) return;
     }
 
     setClientName(newClient.name);
@@ -449,7 +450,7 @@ export const InvoiceFormView: React.FC<InvoiceFormViewProps> = ({
   };
 
   const handleDraftClick = () => {
-    const draftInvoice = buildInvoiceObject('Pendente');
+    const draftInvoice = buildInvoiceObject('Rascunho');
     onSaveDraft(draftInvoice);
   };
 

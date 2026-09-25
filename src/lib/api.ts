@@ -431,10 +431,20 @@ export function mapErpSale(s: ErpSale): Invoice {
 // ---------------------------------------------------------------------------
 
 export async function listClients(search = '', page = 1, pageSize = 100): Promise<Client[]> {
-  const params = new URLSearchParams({ page: String(page), page_size: String(pageSize) });
-  if (search) params.set('search', search);
-  const data = await request<Page<ErpClient>>(`/api/v1/clients?${params.toString()}`);
-  return (data.items || []).filter((c) => c.active).map(mapErpClient);
+  const getPage = (currentPage: number) => {
+    const params = new URLSearchParams({ page: String(currentPage), page_size: String(pageSize) });
+    if (search) params.set('search', search);
+    return request<Page<ErpClient>>(`/api/v1/clients?${params.toString()}`);
+  };
+  const first = await getPage(page);
+  const remaining = Math.max(0, (first.pages || 1) - page);
+  const following = await Promise.all(
+    Array.from({ length: remaining }, (_, index) => getPage(page + index + 1))
+  );
+  return [first, ...following]
+    .flatMap((result) => result.items || [])
+    .filter((client) => client.active)
+    .map(mapErpClient);
 }
 
 export async function createClient(data: Partial<Client>): Promise<Client> {
@@ -482,10 +492,20 @@ export async function deactivateClient(clientId: string): Promise<void> {
 // ---------------------------------------------------------------------------
 
 export async function listProducts(search = '', page = 1, pageSize = 100): Promise<ProductService[]> {
-  const params = new URLSearchParams({ page: String(page), page_size: String(pageSize) });
-  if (search) params.set('search', search);
-  const data = await request<Page<ErpProduct>>(`/api/v1/products?${params.toString()}`);
-  return (data.items || []).filter((p) => p.is_active).map(mapErpProduct);
+  const getPage = (currentPage: number) => {
+    const params = new URLSearchParams({ page: String(currentPage), page_size: String(pageSize) });
+    if (search) params.set('search', search);
+    return request<Page<ErpProduct>>(`/api/v1/products?${params.toString()}`);
+  };
+  const first = await getPage(page);
+  const remaining = Math.max(0, (first.pages || 1) - page);
+  const following = await Promise.all(
+    Array.from({ length: remaining }, (_, index) => getPage(page + index + 1))
+  );
+  return [first, ...following]
+    .flatMap((result) => result.items || [])
+    .filter((product) => product.is_active)
+    .map(mapErpProduct);
 }
 
 export async function createProduct(data: Partial<ProductService>): Promise<ProductService> {
@@ -561,7 +581,23 @@ export async function getSale(saleId: string): Promise<ErpSale> {
 }
 
 export async function createSale(invoice: Invoice, clientId?: string | null): Promise<ErpSale> {
-  const payload = {
+  return request<ErpSale>('/api/v1/sales', { method: 'POST', body: salePayload(invoice, clientId) });
+}
+
+/** Update an existing sale instead of creating a second one on edit. */
+export async function updateSale(
+  saleId: string,
+  invoice: Invoice,
+  clientId?: string | null
+): Promise<ErpSale> {
+  return request<ErpSale>(`/api/v1/sales/${saleId}`, {
+    method: 'PATCH',
+    body: salePayload(invoice, clientId),
+  });
+}
+
+function salePayload(invoice: Invoice, clientId?: string | null) {
+  return {
     document_type: INVERSE_DOC_TYPE_MAP[invoice.docType || 'factura'],
     client_id: clientId || null,
     issue_date: toErpDate(invoice.date),
@@ -576,7 +612,6 @@ export async function createSale(invoice: Invoice, clientId?: string | null): Pr
       vat_rate: percentToErpVat(it.taxPercent ?? 14),
     })),
   };
-  return request<ErpSale>('/api/v1/sales', { method: 'POST', body: payload });
 }
 
 export async function issueSale(saleId: string): Promise<ErpSale> {

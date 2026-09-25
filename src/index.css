@@ -1,5 +1,29 @@
 @import "tailwindcss";
 
+@layer base {
+  html {
+    background: #f8fafc;
+  }
+
+  body {
+    min-width: 320px;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+
+  button,
+  input,
+  textarea,
+  select {
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  :focus-visible {
+    outline: 3px solid rgb(0 86 214 / 28%);
+    outline-offset: 2px;
+  }
+}
+
 @layer utilities {
   /* Hide scrollbar for clean UI */
   .no-scrollbar::-webkit-scrollbar {
@@ -8,6 +32,36 @@
   .no-scrollbar {
     -ms-overflow-style: none;
     scrollbar-width: none;
+  }
+
+  .app-surface {
+    background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
+  }
+
+  .modal-backdrop {
+    animation: modal-backdrop-in 160ms ease-out;
+  }
+
+  .modal-panel {
+    animation: modal-panel-in 180ms cubic-bezier(.2, .8, .2, 1);
+  }
+}
+
+@keyframes modal-backdrop-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes modal-panel-in {
+  from { opacity: 0; transform: translateY(8px) scale(.98); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
   }
 }
 

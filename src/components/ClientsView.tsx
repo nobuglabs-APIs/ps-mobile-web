@@ -20,8 +20,8 @@ import { formatKz } from '../utils/formatters';
 interface ClientsViewProps {
   clients: Client[];
   invoices: Invoice[];
-  onAddClient: (client: Client) => void;
-  onUpdateClient: (client: Client) => void;
+  onAddClient: (client: Client) => Promise<boolean>;
+  onUpdateClient: (client: Client) => Promise<boolean>;
   onDeleteClient: (clientId: string) => void;
   onViewClientInvoices: (clientName: string) => void;
 }
@@ -37,6 +37,7 @@ export const ClientsView: React.FC<ClientsViewProps> = ({
   const [searchTerm, setSearchTerm] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingClient, setEditingClient] = useState<Client | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
 
   // Form fields
   const [name, setName] = useState('');
@@ -68,12 +69,14 @@ export const ClientsView: React.FC<ClientsViewProps> = ({
     setIsModalOpen(true);
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name.trim()) return;
+    if (!name.trim() || isSaving) return;
 
+    setIsSaving(true);
+    let saved: boolean;
     if (editingClient) {
-      onUpdateClient({
+      saved = await onUpdateClient({
         ...editingClient,
         name: name.trim(),
         nif: nif.trim(),
@@ -83,7 +86,7 @@ export const ClientsView: React.FC<ClientsViewProps> = ({
         city: city.trim(),
       });
     } else {
-      onAddClient({
+      saved = await onAddClient({
         id: `c-${Date.now()}`,
         name: name.trim(),
         nif: nif.trim(),
@@ -96,7 +99,8 @@ export const ClientsView: React.FC<ClientsViewProps> = ({
       });
     }
 
-    setIsModalOpen(false);
+    setIsSaving(false);
+    if (saved) setIsModalOpen(false);
   };
 
   // Contar faturas reais de cada cliente
@@ -334,7 +338,24 @@ export const ClientsView: React.FC<ClientsViewProps> = ({
                         <span className="text-xs text-slate-400 whitespace-nowrap">{formatKz(total)}</span>
                       </div>
                     </div>
-                    <ChevronRight className="w-4 h-4 text-slate-300 shrink-0" />
+                    <div className="flex items-center gap-1 shrink-0">
+                      <button
+                        type="button"
+                        onClick={() => onViewClientInvoices(client.name)}
+                        aria-label={`Ver faturas de ${client.name}`}
+                        className="p-2 rounded-lg text-[#0056d6] hover:bg-blue-50 active:bg-blue-100"
+                      >
+                        <FileText className="w-4 h-4" />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => openEditModal(client)}
+                        aria-label={`Editar ${client.name}`}
+                        className="p-2 rounded-lg text-slate-500 hover:bg-slate-100 active:bg-slate-200"
+                      >
+                        <Edit className="w-4 h-4" />
+                      </button>
+                    </div>
                   </div>
                 </div>
               );
@@ -345,10 +366,10 @@ export const ClientsView: React.FC<ClientsViewProps> = ({
 
       {/* Modal Adicionar / Editar Cliente */}
       {isModalOpen && (
-        <div className="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl p-6 sm:p-8 max-w-lg w-full shadow-2xl border border-slate-200 animate-in fade-in zoom-in-95">
+        <div className="modal-backdrop fixed inset-0 z-50 bg-slate-900/45 backdrop-blur-xs flex items-center justify-center p-4" role="presentation">
+          <div role="dialog" aria-modal="true" aria-labelledby="client-modal-title" className="modal-panel bg-white rounded-3xl p-6 sm:p-8 max-w-lg w-full max-h-[calc(100dvh-2rem)] overflow-y-auto shadow-2xl border border-slate-200">
             <div className="flex items-center justify-between pb-4 border-b border-slate-100">
-              <h3 className="text-lg font-extrabold text-[#0a1e42]">
+              <h3 id="client-modal-title" className="text-lg font-extrabold text-[#0a1e42]">
                 {editingClient ? 'Editar Cliente' : 'Novo Cliente'}
               </h3>
               <button
@@ -456,9 +477,10 @@ export const ClientsView: React.FC<ClientsViewProps> = ({
                 </button>
                 <button
                   type="submit"
+                  disabled={isSaving}
                   className="px-5 py-2.5 rounded-xl bg-[#0056d6] hover:bg-[#0047b3] text-white text-xs font-bold transition-colors cursor-pointer"
                 >
-                  {editingClient ? 'Guardar Alterações' : 'Adicionar Cliente'}
+                  {isSaving ? 'A guardar...' : editingClient ? 'Guardar Alterações' : 'Adicionar Cliente'}
                 </button>
               </div>
             </form>
