@@ -18,7 +18,7 @@ import type {
  * - Desenvolvimento local: liga diretamente ao ERP (via env ou default).
  */
 export const ERP_DEV_BASE_URL = (
-  import.meta.env.VITE_ERP_BASE_URL || 'http://3.92.235.72'
+  import.meta.env.VITE_ERP_BASE_URL || 'http://162.35.125.224:8000'
 ).replace(/\/+$/, '');
 
 export const ERP_BASE_URL = import.meta.env.PROD ? '' : ERP_DEV_BASE_URL;
