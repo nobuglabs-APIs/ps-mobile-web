@@ -1,6 +1,6 @@
 import React from 'react';
 import {
-  LayoutDashboard,
+  Home,
   FileText,
   Users,
   Package,
@@ -19,8 +19,8 @@ const tabs: Array<{ id: ActiveTab; label: string; icon: React.ReactNode; activeI
   {
     id: 'dashboard',
     label: 'Início',
-    icon: <LayoutDashboard className="w-6 h-6" strokeWidth={1.8} />,
-    activeIcon: <LayoutDashboard className="w-6 h-6" strokeWidth={2.2} />,
+    icon: <Home className="w-6 h-6" strokeWidth={1.8} />,
+    activeIcon: <Home className="w-6 h-6" strokeWidth={2.2} />,
   },
   {
     id: 'faturas',
