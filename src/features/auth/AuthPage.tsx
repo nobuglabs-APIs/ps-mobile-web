@@ -187,7 +187,7 @@ export function AuthPage({
                 {mode === 'register'
                   ? 'Crie a sua conta e o primeiro espaço de trabalho.'
                   : mode === 'verify'
-                    ? 'A confirmação do e-mail é necessária antes de poder entrar.'
+                    ? 'Abra o link recebido por e-mail para confirmar a conta. Se não chegar, pode pedir outro.'
                     : 'Aceda ao seu espaço de trabalho PS-Mobile.'}
               </p>
 
@@ -218,16 +218,21 @@ export function AuthPage({
                   </div>
                 </>}
                 {mode === 'verify' && <>
-                  <label htmlFor="verification-token">Token de confirmação</label>
-                  <input id="verification-token" onChange={(event) => setVerificationToken(event.target.value)} required value={verificationToken} />
+                  {email && <p className="auth-description">Enviámos o link para {email}.</p>}
+                  {verificationToken && <>
+                    <label htmlFor="verification-token">Token de confirmação</label>
+                    <input id="verification-token" onChange={(event) => setVerificationToken(event.target.value)} required value={verificationToken} />
+                  </>}
                 </>}
-                <button className="button button--primary" disabled={busy} type="submit">
-                  {busy ? 'A processar…' : mode === 'register' ? 'Criar conta' : mode === 'verify' ? 'Confirmar e-mail' : 'Iniciar sessão'}
-                  {!busy && <ArrowRight size={17} />}
-                </button>
+                {mode !== 'verify' && (
+                  <button className="button button--primary" disabled={busy} type="submit">
+                    {busy ? 'A processar…' : mode === 'register' ? 'Criar conta' : 'Iniciar sessão'}
+                    {!busy && <ArrowRight size={17} />}
+                  </button>
+                )}
               </form>
 
-              {mode === 'login' && (
+              {(mode === 'login' || mode === 'verify') && (
                 <button className="text-button auth-resend" disabled={busy || !email.trim()} onClick={() => void resendVerification()} type="button">
                   Reenviar e-mail de confirmação
                 </button>
