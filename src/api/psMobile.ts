@@ -412,6 +412,7 @@ export function register(input: {
   email: string;
   password: string;
   workspace_name: string;
+  referral_code?: string;
 }) {
   return request<Registration>('/auth/register', {
     method: 'POST',

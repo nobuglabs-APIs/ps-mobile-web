@@ -26,6 +26,7 @@ export function AuthPage({
   const [workspaceName, setWorkspaceName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [referralCode, setReferralCode] = useState('');
   const [verificationToken, setVerificationToken] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -33,6 +34,12 @@ export function AuthPage({
   const [notice, setNotice] = useState('');
 
   useEffect(() => {
+    const referral = new URLSearchParams(window.location.search).get('ref');
+    if (referral) {
+      setReferralCode(referral.trim().toUpperCase());
+      setMode('register');
+    }
+
     const token = new URLSearchParams(window.location.search).get('token');
     if (!token) return;
     setVerificationToken(token);
@@ -84,6 +91,7 @@ export function AuthPage({
           email: email.trim(),
           password,
           workspace_name: workspaceName.trim(),
+          referral_code: referralCode || undefined,
         });
         setVerificationToken(result.email_verification_token || '');
         setMode('verify');
