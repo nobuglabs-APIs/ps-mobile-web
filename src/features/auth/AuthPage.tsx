@@ -6,9 +6,10 @@ import {
   type LoginChallenge,
   type TokenResponse,
 } from '../../api/client';
-import { login, register, resendEmailVerification, verifyEmail, verifyLogin } from '../../api/psMobile';
+import { login, loginWithFacebook, loginWithGoogle, register, resendEmailVerification, verifyEmail, verifyLogin } from '../../api/psMobile';
 import { Feedback } from '../../components/feedback/Feedback';
 import { BrandAttribution } from '../../components/branding/BrandAttribution';
+import { SocialLoginButtons } from './SocialLoginButtons';
 
 type AuthMode = 'login' | 'register' | 'verify';
 
@@ -116,6 +117,24 @@ export function AuthPage({
     const tokens = await verifyLogin(challenge.challenge_id, challengeCode.trim());
     setChallenge(null);
     onAuthenticated(tokens);
+  });
+
+  const completeSocialLogin = (result: Awaited<ReturnType<typeof loginWithGoogle>>) => {
+    if (isLoginChallenge(result)) {
+      setChallenge(result);
+      setChallengeCode('');
+      setNotice(`Código enviado por ${result.channel === 'email' ? 'e-mail' : 'SMS'}.`);
+      return;
+    }
+    onAuthenticated(result.tokens);
+  };
+
+  const authenticateWithGoogle = (token: string) => run(async () => {
+    completeSocialLogin(await loginWithGoogle(token));
+  });
+
+  const authenticateWithFacebook = (token: string) => run(async () => {
+    completeSocialLogin(await loginWithFacebook(token));
   });
 
   const resendVerification = () => run(async () => {
@@ -231,6 +250,15 @@ export function AuthPage({
                   </button>
                 )}
               </form>
+
+              {mode === 'login' && (
+                <SocialLoginButtons
+                  disabled={busy}
+                  onError={setError}
+                  onFacebookToken={authenticateWithFacebook}
+                  onGoogleToken={authenticateWithGoogle}
+                />
+              )}
 
               {(mode === 'login' || mode === 'verify') && (
                 <button className="text-button auth-resend" disabled={busy || !email.trim()} onClick={() => void resendVerification()} type="button">

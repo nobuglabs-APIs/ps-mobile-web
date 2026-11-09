@@ -1,5 +1,5 @@
 import { lazy, Suspense, useCallback, useEffect, useState } from 'react';
-import { ArrowRight, LoaderCircle, Store } from 'lucide-react';
+import { ArrowRight, CreditCard, LoaderCircle, Store, X } from 'lucide-react';
 import {
   clearTokens,
   readAccessToken,
@@ -13,29 +13,62 @@ import { AppShell, type AppView } from './components/layout/AppShell';
 import { BrandSplash } from './components/branding/BrandSplash';
 import { Feedback } from './components/feedback/Feedback';
 import { AuthPage } from './features/auth/AuthPage';
+import type { SettingsTab } from './features/settings/SettingsPage';
 const DashboardPage = lazy(() => import('./features/dashboard/DashboardPage').then((module) => ({ default: module.DashboardPage })));
 const InvoicesPage = lazy(() => import('./features/invoices/InvoicesPage').then((module) => ({ default: module.InvoicesPage })));
 const ProductsPage = lazy(() => import('./features/products/ProductsPage').then((module) => ({ default: module.ProductsPage })));
 const SalesPage = lazy(() => import('./features/sales/SalesPage').then((module) => ({ default: module.SalesPage })));
 const SettingsPage = lazy(() => import('./features/settings/SettingsPage').then((module) => ({ default: module.SettingsPage })));
-const AdminPage = lazy(() => import('./features/admin/AdminPage').then((module) => ({ default: module.AdminPage })));
 const CustomersPage = lazy(() => import('./features/customers/CustomersPage').then((module) => ({ default: module.CustomersPage })));
 const CashPage = lazy(() => import('./features/cash/CashPage').then((module) => ({ default: module.CashPage })));
 const TeamPage = lazy(() => import('./features/team/TeamPage').then((module) => ({ default: module.TeamPage })));
+const NotificationsPage = lazy(() => import('./features/notifications/NotificationsPage').then((module) => ({ default: module.NotificationsPage })));
 
 const WORKSPACE_KEY = 'ps_mobile_workspace_id';
+const shortcutViews = ['sales', 'products', 'cash'] as const satisfies readonly AppView[];
+
+type BeforeInstallPromptEvent = Event & {
+  prompt: () => Promise<void>;
+  userChoice: Promise<{ outcome: 'accepted' | 'dismissed'; platform: string }>;
+};
 
 export default function App() {
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [workspace, setWorkspace] = useState<Workspace | null>(null);
   const [workspaceId, setWorkspaceId] = useState(() => localStorage.getItem(WORKSPACE_KEY) || '');
-  const [view, setView] = useState<AppView>('overview');
+  const [view, setView] = useState<AppView>(() => {
+    const requestedView = new URLSearchParams(window.location.search).get('view');
+    return shortcutViews.find((shortcutView) => shortcutView === requestedView) || 'overview';
+  });
+  const [settingsTab, setSettingsTab] = useState<SettingsTab>('workspace');
   const [sessionChallenge, setSessionChallenge] = useState<LoginChallenge | null>(null);
+  const [billingRequired, setBillingRequired] = useState(false);
+  const [installPrompt, setInstallPrompt] = useState<BeforeInstallPromptEvent | null>(null);
+  const [installHint, setInstallHint] = useState('');
+  const [isInstalled, setIsInstalled] = useState(() => window.matchMedia('(display-mode: standalone)').matches);
   const [loading, setLoading] = useState(Boolean(readAccessToken()));
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [workspaceName, setWorkspaceName] = useState('');
   const [invitationCode, setInvitationCode] = useState('');
+
+  useEffect(() => {
+    const onInstallPrompt = (event: Event) => {
+      event.preventDefault();
+      setInstallPrompt(event as BeforeInstallPromptEvent);
+    };
+    const onInstalled = () => {
+      setIsInstalled(true);
+      setInstallPrompt(null);
+      setInstallHint('');
+    };
+    window.addEventListener('beforeinstallprompt', onInstallPrompt);
+    window.addEventListener('appinstalled', onInstalled);
+    return () => {
+      window.removeEventListener('beforeinstallprompt', onInstallPrompt);
+      window.removeEventListener('appinstalled', onInstalled);
+    };
+  }, []);
 
   const loadSession = useCallback(async () => {
     const user = await getMe();
@@ -65,6 +98,12 @@ export default function App() {
     };
     window.addEventListener('ps-mobile:auth-challenge', onChallenge);
     return () => window.removeEventListener('ps-mobile:auth-challenge', onChallenge);
+  }, []);
+
+  useEffect(() => {
+    const onBillingRequired = () => setBillingRequired(true);
+    window.addEventListener('ps-mobile:billing-required', onBillingRequired);
+    return () => window.removeEventListener('ps-mobile:billing-required', onBillingRequired);
   }, []);
 
   useEffect(() => {
@@ -169,16 +208,32 @@ export default function App() {
     }
   };
 
+  const installApp = async () => {
+    if (!installPrompt) {
+      setInstallHint('No menu do navegador, escolha “Adicionar ao ecrã principal” ou “Instalar aplicação”.');
+      return;
+    }
+    try {
+      await installPrompt.prompt();
+      const choice = await installPrompt.userChoice;
+      if (choice.outcome === 'accepted') {
+        setIsInstalled(true);
+        setInstallHint('');
+      } else {
+        setInstallHint('Pode instalar a aplicação mais tarde através do menu do navegador.');
+      }
+      setInstallPrompt(null);
+    } catch {
+      setInstallHint('Não foi possível abrir a instalação. Use o menu do navegador para adicionar a aplicação ao ecrã principal.');
+    }
+  };
+
   if (loading) {
     return <BrandSplash />;
   }
 
   if (!profile || !readAccessToken() || sessionChallenge) {
     return <AuthPage key={sessionChallenge?.challenge_id || 'login'} onAuthenticated={handleAuthenticated} pendingChallenge={sessionChallenge} />;
-  }
-
-  if (!workspace && profile.is_admin) {
-    return <AdminPage />;
   }
 
   if (!workspace) {
@@ -202,20 +257,25 @@ export default function App() {
 
   const currentMembership = profile.workspaces.find((item) => item.workspace_id === workspaceId);
   const role = currentMembership?.role || 'seller';
-  const activeView = !profile.is_admin && role === 'seller' && !['sales', 'products', 'cash'].includes(view)
+  const activeView = !profile.is_admin && role === 'seller' && !['sales', 'products', 'cash', 'notifications'].includes(view)
     ? 'sales'
     : view;
 
   return (
     <AppShell
       onLogout={() => void handleLogout()}
-      onNavigate={setView}
+      onInstallApp={() => void installApp()}
+      onNavigate={(nextView) => {
+        if (nextView === 'settings') setSettingsTab('workspace');
+        setView(nextView);
+      }}
       onWorkspaceChange={(id) => void changeWorkspace(id)}
       profileEmail={profile.email}
       profileAvatarUrl={profile.avatar_url}
       profileName={profile.full_name}
+      installHint={installHint}
+      isInstalled={isInstalled}
       role={role}
-      isAdmin={profile.is_admin}
       view={activeView}
       workspaceId={workspaceId}
       workspaces={profile.workspaces}
@@ -229,10 +289,44 @@ export default function App() {
       {activeView === 'customers' && role !== 'seller' && <CustomersPage canManage key={workspaceId} workspaceId={workspaceId} />}
       {activeView === 'cash' && <CashPage canViewHistory={role !== 'seller'} currency={workspace.currency} key={workspaceId} workspaceId={workspaceId} />}
       {activeView === 'team' && role !== 'seller' && <TeamPage canEditMembers={role === 'owner'} canInvite={role === 'owner' || role === 'manager'} key={workspaceId} onMembershipAccepted={loadSession} workspaceId={workspaceId} />}
+      {activeView === 'notifications' && <NotificationsPage />}
       {activeView === 'invoices' && <InvoicesPage key={workspaceId} workspaceId={workspaceId} />}
-      {activeView === 'settings' && <SettingsPage canManageWorkspace={role === 'owner'} key={workspaceId} onProfileUpdated={setProfile} onWorkspaceUpdated={setWorkspace} profile={profile} workspace={workspace} workspaceId={workspaceId} />}
-      {activeView === 'admin' && profile.is_admin && <AdminPage onBack={() => setView('overview')} />}
+      {activeView === 'settings' && <SettingsPage canManageWorkspace={role === 'owner'} initialTab={settingsTab} key={workspaceId} onProfileUpdated={setProfile} onWorkspaceUpdated={setWorkspace} profile={profile} workspace={workspace} workspaceId={workspaceId} />}
       </Suspense>
+      {billingRequired && (
+        <div className="modal-backdrop" role="presentation">
+          <section aria-labelledby="billing-required-title" aria-modal="true" className="dialog-card billing-required-dialog" role="dialog">
+            <div className="billing-required-icon"><CreditCard aria-hidden="true" size={21} /></div>
+            <button
+              aria-label="Fechar aviso"
+              className="icon-button billing-required-close"
+              onClick={() => setBillingRequired(false)}
+              type="button"
+            >
+              <X size={17} />
+            </button>
+            <h2 id="billing-required-title">Período de teste terminado</h2>
+            <p>Para continuar a registar vendas e a fazer alterações, escolha um plano ou regularize a subscrição. Os seus dados continuam disponíveis.</p>
+            {role === 'owner' ? (
+              <button
+                className="button button--primary"
+                onClick={() => {
+                  setBillingRequired(false);
+                  setSettingsTab('billing');
+                  setView('settings');
+                }}
+                type="button"
+              >
+                Ver planos
+                <ArrowRight size={16} />
+              </button>
+            ) : (
+              <p className="billing-required-hint">Peça ao proprietário do negócio para escolher ou regularizar um plano.</p>
+            )}
+            <button className="button button--subtle" onClick={() => setBillingRequired(false)} type="button">Fechar</button>
+          </section>
+        </div>
+      )}
     </AppShell>
   );
 }

@@ -1,11 +1,13 @@
 import { useEffect, useState, type FormEvent, type ReactNode } from 'react';
-import { Building2, FileText, LockKeyhole, Save, ShieldCheck, Trash2, Upload } from 'lucide-react';
+import { Building2, CreditCard, FileText, LockKeyhole, Save, ShieldCheck, Trash2, Upload, UserRound } from 'lucide-react';
 import { deleteWorkspaceLogo, disableTwoFactor, enableTwoFactor, getFiscalSettings, getTwoFactorStatus, requestTwoFactorDisable, setupTwoFactor, updateFiscalSettings, updateWorkspace, uploadWorkspaceLogo, type FiscalSettings, type TwoFactorStatus, type UserProfile, type Workspace } from '../../api/psMobile';
 import type { LoginChallenge } from '../../api/client';
 import { Feedback, PageHeading } from '../../components/feedback/Feedback';
 import { mediaUrl } from '../../api/client';
 import { AccountSettings } from './AccountSettings';
 import { BillingSettings } from './BillingSettings';
+
+export type SettingsTab = 'workspace' | 'fiscal' | 'billing' | 'account' | 'security';
 
 export function SettingsPage({
   workspace,
@@ -14,6 +16,7 @@ export function SettingsPage({
   canManageWorkspace,
   profile,
   onProfileUpdated,
+  initialTab,
 }: {
   workspace: Workspace;
   workspaceId: string;
@@ -21,6 +24,7 @@ export function SettingsPage({
   canManageWorkspace: boolean;
   profile: UserProfile;
   onProfileUpdated: (profile: UserProfile) => void;
+  initialTab: SettingsTab;
 }) {
   const [settings, setSettings] = useState<FiscalSettings | null>(null);
   const [twoFactor, setTwoFactor] = useState<TwoFactorStatus | null>(null);
@@ -34,6 +38,9 @@ export function SettingsPage({
   const [notice, setNotice] = useState('');
   const [busy, setBusy] = useState(false);
   const [logoBusy, setLogoBusy] = useState(false);
+  const [tab, setTab] = useState<SettingsTab>(initialTab);
+
+  useEffect(() => setTab(initialTab), [initialTab]);
 
   useEffect(() => {
     setWorkspaceName(workspace.name);
@@ -166,10 +173,19 @@ export function SettingsPage({
 
   return (
     <div className="page-stack">
-      <PageHeading eyebrow="CONFIGURAÇÕES" title="Definições do negócio" description="Atualize a identidade fiscal do espaço e proteja a sua conta." />
+      <PageHeading eyebrow="CONFIGURAÇÕES" title="Definições" description="Gira o negócio, faturação e segurança num só lugar." />
       {error && <Feedback message={error} />}
       {notice && <Feedback kind="success" message={notice} />}
 
+      <nav aria-label="Secções das definições" className="settings-tabs">
+        <SettingsTabButton active={tab === 'workspace'} icon={<Building2 size={16} />} label="Negócio" onClick={() => setTab('workspace')} />
+        <SettingsTabButton active={tab === 'fiscal'} icon={<FileText size={16} />} label="Fiscal" onClick={() => setTab('fiscal')} />
+        {canManageWorkspace && <SettingsTabButton active={tab === 'billing'} icon={<CreditCard size={16} />} label="Plano e subscrição" onClick={() => setTab('billing')} />}
+        <SettingsTabButton active={tab === 'account'} icon={<UserRound size={16} />} label="Conta" onClick={() => setTab('account')} />
+        <SettingsTabButton active={tab === 'security'} icon={<ShieldCheck size={16} />} label="Segurança" onClick={() => setTab('security')} />
+      </nav>
+
+      {tab === 'workspace' && <>
       <section className="surface-card">
         <div className="section-heading">
           <div className="section-heading__title"><span className="row-icon row-icon--blue"><Building2 size={18} /></span><div><h2>Espaço de trabalho</h2><p>Identificação geral e moeda utilizada nos relatórios.</p></div></div>
@@ -204,7 +220,9 @@ export function SettingsPage({
         </div>
         {!canManageWorkspace && <p className="form-hint">Apenas o proprietário pode alterar a imagem do espaço.</p>}
       </section>
+      </>}
 
+      {tab === 'fiscal' && (
       <section className="surface-card">
         <div className="section-heading">
           <div className="section-heading__title"><span className="row-icon row-icon--violet"><FileText size={18} /></span><div><h2>Identificação fiscal</h2><p>Dados usados na emissão dos documentos fiscais e no SAF-T.</p></div></div>
@@ -231,10 +249,12 @@ export function SettingsPage({
           </>
         ) : <div className="loading-panel">A carregar dados fiscais…</div>}
       </section>
+      )}
 
-      {canManageWorkspace && <BillingSettings workspaceId={workspaceId} canManage />}
-      <AccountSettings profile={profile} onProfileUpdated={onProfileUpdated} />
+      {tab === 'billing' && canManageWorkspace && <BillingSettings workspaceId={workspaceId} canManage />}
+      {tab === 'account' && <AccountSettings profile={profile} onProfileUpdated={onProfileUpdated} />}
 
+      {tab === 'security' && (
       <section className="surface-card security-card">
         <div className="section-heading">
           <div className="section-heading__title"><span className="row-icon row-icon--green"><ShieldCheck size={18} /></span><div><h2>Segurança da conta</h2><p>Proteja o início de sessão com um código de verificação adicional.</p></div></div>
@@ -266,7 +286,16 @@ export function SettingsPage({
           </>
         )}
       </section>
+      )}
     </div>
+  );
+}
+
+function SettingsTabButton({ active, icon, label, onClick }: { active: boolean; icon: ReactNode; label: string; onClick: () => void }) {
+  return (
+    <button aria-current={active ? 'page' : undefined} className={`settings-tab${active ? ' settings-tab--active' : ''}`} onClick={onClick} type="button">
+      {icon}<span>{label}</span>
+    </button>
   );
 }
 

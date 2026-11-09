@@ -5,8 +5,10 @@ import {
   getBillingOverview,
   listPlans,
   payCharge,
+  simulatePayment,
   startCheckout,
   type BillingOverview as BillingStatus,
+  type BillingPayment,
   type Plan,
 } from '../../api/psMobile';
 import { Feedback, formatDate, formatMoney } from '../../components/feedback/Feedback';
@@ -35,6 +37,7 @@ export function BillingSettings({ workspaceId, canManage }: { workspaceId: strin
   const [provider, setProvider] = useState(providers[0].value);
   const [payerPhone, setPayerPhone] = useState('');
   const [paymentUrl, setPaymentUrl] = useState<string | null>(null);
+  const [simulationPaymentId, setSimulationPaymentId] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
@@ -64,6 +67,7 @@ export function BillingSettings({ workspaceId, canManage }: { workspaceId: strin
     setError('');
     setNotice('');
     setPaymentUrl(null);
+    setSimulationPaymentId(null);
     try {
       await action();
     } catch (reason) {
@@ -75,16 +79,35 @@ export function BillingSettings({ workspaceId, canManage }: { workspaceId: strin
 
   const choosePlan = (plan: Plan) => run(async () => {
     const result = await startCheckout(workspaceId, plan.code, provider, payerPhone || undefined);
-    setPaymentUrl(result.payment?.external_url || null);
+    if (result.payment) handlePayment(result.payment);
     if (result.subscription) setNotice('Plano ativado.');
-    else if (result.charge) setNotice('Cobrança criada. Conclua o pagamento para ativar o plano.');
+    else if (result.charge && !result.payment) setNotice('Cobrança criada. Conclua o pagamento para ativar o plano.');
     await load();
   });
 
   const payPendingCharge = (chargeId: string) => run(async () => {
     const result = await payCharge(workspaceId, chargeId, provider, payerPhone || undefined);
-    setPaymentUrl(result.external_url);
-    setNotice('Pedido de pagamento enviado ao provedor.');
+    handlePayment(result);
+    await load();
+  });
+
+  const handlePayment = (payment: BillingPayment) => {
+    if (isSimulatedPayment(payment)) {
+      setSimulationPaymentId(payment.id);
+      setNotice('Pagamento de teste criado. Confirme-o aqui para ativar o plano.');
+    } else {
+      setPaymentUrl(payment.external_url);
+      setNotice(payment.external_url
+        ? 'Pedido de pagamento criado. Conclua-o na página segura do provedor.'
+        : 'Pedido de pagamento enviado ao provedor. Aguarde a confirmação.');
+    }
+  };
+
+  const confirmSimulation = () => run(async () => {
+    if (!simulationPaymentId) return;
+    await simulatePayment(workspaceId, simulationPaymentId);
+    setSimulationPaymentId(null);
+    setNotice('Pagamento de teste confirmado. O plano foi ativado.');
     await load();
   });
 
@@ -106,6 +129,14 @@ export function BillingSettings({ workspaceId, canManage }: { workspaceId: strin
       {error && <Feedback message={error} />}
       {notice && <Feedback kind="success" message={notice} />}
       {paymentUrl && <a className="billing-payment-link" href={paymentUrl} rel="noreferrer" target="_blank">Abrir página segura de pagamento</a>}
+      {simulationPaymentId && (
+        <div className="billing-simulation-notice">
+          <p>Está em modo de testes. Nenhum valor será cobrado.</p>
+          <button className="button button--primary" disabled={busy} onClick={confirmSimulation} type="button">
+            {busy ? 'A confirmar…' : 'Confirmar pagamento de teste'}
+          </button>
+        </div>
+      )}
       {!overview ? <div className="loading-panel">A carregar plano e subscrição…</div> : (
         <>
           <div className="billing-status-card">
@@ -157,4 +188,11 @@ export function BillingSettings({ workspaceId, canManage }: { workspaceId: strin
       )}
     </section>
   );
+}
+
+function isSimulatedPayment(payment: BillingPayment): boolean {
+  return typeof payment.metadata === 'object'
+    && payment.metadata !== null
+    && 'simulation' in payment.metadata
+    && payment.metadata.simulation === true;
 }

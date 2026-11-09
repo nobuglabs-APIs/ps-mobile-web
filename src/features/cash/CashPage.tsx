@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useState, type FormEvent } from 'react';
 import { ArrowDownToLine, Banknote, CircleDollarSign, DoorClosed, DoorOpen } from 'lucide-react';
-import { ApiError } from '../../api/client';
 import {
   addCashMovement,
   closeCash,
@@ -34,17 +33,13 @@ export function CashPage({ workspaceId, currency, canViewHistory }: { workspaceI
     setLoaded(false);
     setError('');
     try {
-      setSession(await getCurrentCash(workspaceId));
-      setNoOpenSession(false);
+      const currentSession = await getCurrentCash(workspaceId);
+      setSession(currentSession);
+      setNoOpenSession(currentSession === null);
     } catch (reason) {
-      if (reason instanceof ApiError && reason.status === 404) {
-        setSession(null);
-        setNoOpenSession(true);
-      } else {
-        setError(reason instanceof Error ? reason.message : 'Não foi possível carregar a caixa.');
-        setSession(null);
-        setNoOpenSession(false);
-      }
+      setError(reason instanceof Error ? reason.message : 'Não foi possível carregar a caixa.');
+      setSession(null);
+      setNoOpenSession(false);
     } finally {
       setLoaded(true);
     }

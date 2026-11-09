@@ -1,9 +1,23 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Minus, Plus, ShoppingCart, Trash2 } from 'lucide-react';
-import { cancelSale, createSale, listCustomers, listProducts, listSales, type Customer, type Product, type Sale } from '../../api/psMobile';
+import { FileText, Minus, Plus, ShoppingCart, Trash2 } from 'lucide-react';
+import {
+  cancelSale,
+  createSale,
+  getFiscalSettings,
+  getSaleInvoice,
+  listCustomers,
+  listProducts,
+  listSales,
+  type Customer,
+  type FiscalSettings,
+  type InvoiceDetail,
+  type Product,
+  type Sale,
+} from '../../api/psMobile';
 import { Feedback, formatDate, formatMoney, PageHeading } from '../../components/feedback/Feedback';
 import { PaymentMethodLogo } from '../../components/payments/PaymentMethodLogo';
 import { mediaUrl } from '../../api/client';
+import { InvoiceSheet } from '../invoices/InvoiceSheet';
 
 const paymentOptions = [
   { value: 'cash', label: 'Numerário' },
@@ -34,6 +48,9 @@ export function SalesPage({
   const [notice, setNotice] = useState('');
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
+  const [receipt, setReceipt] = useState<InvoiceDetail | null>(null);
+  const [openingReceiptId, setOpeningReceiptId] = useState('');
+  const [issuer, setIssuer] = useState<FiscalSettings | null>(null);
 
   const load = async () => {
     setError('');
@@ -53,6 +70,14 @@ export function SalesPage({
   };
 
   useEffect(() => { void load(); }, [workspaceId]);
+
+  useEffect(() => {
+    let active = true;
+    getFiscalSettings(workspaceId)
+      .then((settings) => { if (active) setIssuer(settings); })
+      .catch(() => { /* a folha imprime na mesma, sem os dados do emitente */ });
+    return () => { active = false; };
+  }, [workspaceId]);
 
   useEffect(() => {
     const requestId = ++customerLookupId.current;
@@ -100,10 +125,28 @@ export function SalesPage({
       setCustomerId('');
       setNotice(`Venda #${sale.number} registada. O documento fiscal foi emitido automaticamente.`);
       await load();
+      try {
+        setReceipt(await getSaleInvoice(workspaceId, sale.id));
+      } catch {
+        setError(`Venda #${sale.number} registada, mas não foi possível abrir a fatura. Consulte os documentos fiscais.`);
+      }
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : 'Não foi possível registar a venda.');
     } finally {
       setBusy(false);
+    }
+  };
+
+  const openReceipt = async (sale: Sale) => {
+    if (openingReceiptId) return;
+    setError('');
+    setOpeningReceiptId(sale.id);
+    try {
+      setReceipt(await getSaleInvoice(workspaceId, sale.id));
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : 'Não foi possível abrir a fatura desta venda.');
+    } finally {
+      setOpeningReceiptId('');
     }
   };
 
@@ -194,7 +237,10 @@ export function SalesPage({
                     <td>{paymentOptions.find((option) => option.value === sale.payment_method)?.label || sale.payment_method}</td>
                     <td><strong>{formatMoney(sale.total_cents, currency)}</strong></td>
                     <td><span className={`status-pill${sale.status === 'paid' ? ' status-pill--success' : ' status-pill--danger'}`}>{sale.status === 'paid' ? 'Concluída' : 'Anulada'}</span></td>
-                    <td>{canCancel && sale.status === 'paid' && <button className="button button--subtle button--small" onClick={() => void voidSale(sale)} type="button">Anular</button>}</td>
+                    <td><div className="inline-actions">
+                      {sale.status === 'paid' && <button className="button button--subtle button--small" disabled={openingReceiptId === sale.id} onClick={() => void openReceipt(sale)} type="button"><FileText size={14} /> {openingReceiptId === sale.id ? 'A abrir…' : 'Fatura'}</button>}
+                      {canCancel && sale.status === 'paid' && <button className="button button--subtle button--small" onClick={() => void voidSale(sale)} type="button">Anular</button>}
+                    </div></td>
                   </tr>
                 ))}
               </tbody>
@@ -202,6 +248,8 @@ export function SalesPage({
           </div>
         ) : !loading && <div className="empty-state"><span><ShoppingCart size={20} /></span><strong>Sem vendas registadas</strong><p>Quando registar uma venda, o histórico aparece nesta área.</p></div>}
       </section>
+
+      {receipt && <InvoiceSheet invoice={receipt} issuer={issuer} onClose={() => setReceipt(null)} />}
     </div>
   );
 }

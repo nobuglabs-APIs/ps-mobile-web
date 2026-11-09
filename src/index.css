@@ -141,5 +141,49 @@
   .print-container thead {
     display: table-header-group;
   }
+
+  /* A folha do documento vive num portal no <body>. Ocultar a aplicação com
+     display:none (e não apenas visibility) evita folhas em branco causadas
+     pelo espaço que a interface continuaria a ocupar. */
+  body > *:not(.invoice-overlay) {
+    display: none !important;
+  }
+
+  .invoice-overlay {
+    position: static !important;
+    display: block !important;
+    background: none !important;
+  }
+
+  .invoice-overlay__bar {
+    display: none !important;
+  }
+
+  .invoice-overlay__scroll {
+    display: block !important;
+    overflow: visible !important;
+    padding: 0 !important;
+  }
+
+  .invoice-sheet {
+    width: auto !important;
+    min-height: 0 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    box-shadow: none !important;
+  }
+
+  .inv-head,
+  .inv-parties,
+  .inv-totals,
+  .inv-foot,
+  .invoice-sheet tr {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+
+  .inv-table thead {
+    display: table-header-group;
+  }
 }
 

@@ -75,6 +75,10 @@ async function errorFromResponse(response: Response): Promise<ApiError> {
   } catch {
     // Keep the HTTP status when the server does not return JSON.
   }
+  if (response.status === 402) {
+    message = 'O período de teste deste negócio terminou. Escolha um plano para continuar a fazer alterações.';
+    window.dispatchEvent(new Event('ps-mobile:billing-required'));
+  }
   return new ApiError(message, response.status);
 }
 
@@ -141,6 +145,7 @@ export async function request<T>(
   options: {
     method?: string;
     body?: unknown;
+    headers?: HeadersInit;
     authenticated?: boolean;
     retry?: boolean;
   } = {},
@@ -148,13 +153,14 @@ export async function request<T>(
   const {
     method = 'GET',
     body,
+    headers,
     authenticated = true,
     retry = true,
   } = options;
-  let response = await send(path, { method }, body, authenticated);
+  let response = await send(path, { method, headers }, body, authenticated);
 
   if (response.status === 401 && authenticated && retry) {
-    if (await renewSession()) response = await send(path, { method }, body, authenticated);
+    if (await renewSession()) response = await send(path, { method, headers }, body, authenticated);
   }
 
   return parseResponse<T>(response);

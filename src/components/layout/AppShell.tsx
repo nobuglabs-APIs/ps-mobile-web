@@ -1,11 +1,13 @@
-import type { ReactNode } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import {
-  BadgeCheck,
   Boxes,
   Banknote,
+  Bell,
+  Download,
   FileText,
   LayoutDashboard,
   LogOut,
+  MoreHorizontal,
   UsersRound,
   UserRound,
   Settings2,
@@ -16,7 +18,7 @@ import type { Membership } from '../../api/psMobile';
 import { BrandAttribution } from '../branding/BrandAttribution';
 import { mediaUrl } from '../../api/client';
 
-export type AppView = 'overview' | 'products' | 'sales' | 'invoices' | 'customers' | 'cash' | 'team' | 'settings' | 'admin';
+export type AppView = 'overview' | 'products' | 'sales' | 'invoices' | 'customers' | 'cash' | 'team' | 'notifications' | 'settings';
 
 const navigation: Array<{ id: AppView; label: string; icon: typeof LayoutDashboard }> = [
   { id: 'overview', label: 'Visão geral', icon: LayoutDashboard },
@@ -25,9 +27,9 @@ const navigation: Array<{ id: AppView; label: string; icon: typeof LayoutDashboa
   { id: 'customers', label: 'Clientes', icon: UserRound },
   { id: 'cash', label: 'Caixa', icon: Banknote },
   { id: 'team', label: 'Equipa', icon: UsersRound },
+  { id: 'notifications', label: 'Notificações', icon: Bell },
   { id: 'invoices', label: 'Documentos fiscais', icon: FileText },
   { id: 'settings', label: 'Definições', icon: Settings2 },
-  { id: 'admin', label: 'Administração', icon: BadgeCheck },
 ];
 
 export function AppShell({
@@ -42,7 +44,9 @@ export function AppShell({
   workspaceId,
   onWorkspaceChange,
   role,
-  isAdmin,
+  onInstallApp,
+  installHint,
+  isInstalled,
 }: {
   children: ReactNode;
   view: AppView;
@@ -55,18 +59,38 @@ export function AppShell({
   workspaceId: string;
   onWorkspaceChange: (workspaceId: string) => void;
   role: Membership['role'];
-  isAdmin: boolean;
+  onInstallApp: () => void;
+  installHint: string;
+  isInstalled: boolean;
 }) {
+  const [moreOpen, setMoreOpen] = useState(false);
   const visibleNavigation = role === 'seller'
-    ? navigation.filter(({ id }) => id === 'sales' || id === 'products' || id === 'cash' || (id === 'admin' && isAdmin))
-    : navigation.filter(({ id }) => id !== 'admin' || isAdmin);
+    ? navigation.filter(({ id }) => id === 'sales' || id === 'products' || id === 'cash' || id === 'notifications')
+    : navigation;
+  const mobilePrimaryIds: AppView[] = ['overview', 'sales', 'products', 'cash'];
+  const mobilePrimaryNavigation = visibleNavigation.filter(({ id }) => mobilePrimaryIds.includes(id));
+  const mobileMoreNavigation = visibleNavigation.filter(({ id }) => !mobilePrimaryIds.includes(id));
+
+  useEffect(() => {
+    if (!moreOpen) return;
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setMoreOpen(false);
+    };
+    window.addEventListener('keydown', closeOnEscape);
+    return () => window.removeEventListener('keydown', closeOnEscape);
+  }, [moreOpen]);
+
+  const navigate = (nextView: AppView) => {
+    setMoreOpen(false);
+    onNavigate(nextView);
+  };
 
   return (
     <div className="app-shell">
       <aside className="sidebar">
         <a className="brand" href="#" aria-label="PS Faturas, início" onClick={(event) => {
           event.preventDefault();
-          onNavigate('overview');
+          navigate('overview');
         }}>
           <img alt="" className="brand__mark brand__mark--image" decoding="async" src="/brand/ps-mobile.webp" />
           <span className="brand__text">
@@ -97,7 +121,7 @@ export function AppShell({
               className={`nav-link${view === id ? ' nav-link--active' : ''}`}
               key={id}
               type="button"
-              onClick={() => onNavigate(id)}
+              onClick={() => navigate(id)}
               aria-current={view === id ? 'page' : undefined}
             >
               <Icon size={19} strokeWidth={1.8} aria-hidden="true" />
@@ -136,6 +160,16 @@ export function AppShell({
               {workspaces.map((workspace) => <option key={workspace.workspace_id} value={workspace.workspace_id}>{workspace.workspace_name}</option>)}
             </select>
           </label>
+          <button
+            aria-current={view === 'notifications' ? 'page' : undefined}
+            aria-label="Abrir notificações"
+            className={`icon-button mobile-notifications${view === 'notifications' ? ' mobile-notifications--active' : ''}`}
+            onClick={() => navigate('notifications')}
+            title="Notificações"
+            type="button"
+          >
+            <Bell size={19} aria-hidden="true" />
+          </button>
           <button type="button" className="icon-button mobile-logout" onClick={onLogout} aria-label="Terminar sessão" title="Terminar sessão">
             <LogOut size={18} aria-hidden="true" />
           </button>
@@ -144,19 +178,57 @@ export function AppShell({
         <footer className="app-attribution"><BrandAttribution /></footer>
       </main>
 
+      {moreOpen && (
+        <div className="mobile-more-overlay">
+          <button aria-label="Fechar menu" className="mobile-more-dismiss" onClick={() => setMoreOpen(false)} type="button" />
+          <nav aria-label="Mais secções" className="mobile-more-panel" id="mobile-more-panel">
+            {mobileMoreNavigation.map(({ id, label, icon: Icon }) => (
+              <button
+                aria-current={view === id ? 'page' : undefined}
+                className={view === id ? 'mobile-more-item mobile-more-item--active' : 'mobile-more-item'}
+                key={id}
+                onClick={() => navigate(id)}
+                type="button"
+              >
+                <Icon size={19} aria-hidden="true" />
+                <span>{label === 'Documentos fiscais' ? 'Faturas' : label}</span>
+              </button>
+            ))}
+            {!isInstalled && (
+              <>
+                <button className="mobile-more-item" onClick={onInstallApp} type="button">
+                  <Download size={19} aria-hidden="true" />
+                  <span>Instalar aplicação</span>
+                </button>
+                {installHint && <p className="mobile-install-hint" role="status">{installHint}</p>}
+              </>
+            )}
+          </nav>
+        </div>
+      )}
       <nav className="mobile-nav" aria-label="Navegação principal">
-        {visibleNavigation.map(({ id, label, icon: Icon }) => (
+        {mobilePrimaryNavigation.map(({ id, label, icon: Icon }) => (
           <button
             key={id}
             type="button"
             className={view === id ? 'mobile-nav__item mobile-nav__item--active' : 'mobile-nav__item'}
-            onClick={() => onNavigate(id)}
+            onClick={() => navigate(id)}
             aria-current={view === id ? 'page' : undefined}
           >
             <Icon size={20} aria-hidden="true" />
-            <span>{label === 'Visão geral' ? 'Início' : label === 'Documentos fiscais' ? 'Faturas' : label}</span>
+            <span>{label === 'Visão geral' ? 'Início' : label}</span>
           </button>
         ))}
+        <button
+          aria-expanded={moreOpen}
+          aria-controls="mobile-more-panel"
+          className={`mobile-nav__item${moreOpen || mobileMoreNavigation.some(({ id }) => id === view) ? ' mobile-nav__item--active' : ''}`}
+          onClick={() => setMoreOpen((open) => !open)}
+          type="button"
+        >
+          <MoreHorizontal size={20} aria-hidden="true" />
+          <span>Mais</span>
+        </button>
       </nav>
     </div>
   );

@@ -1,7 +1,23 @@
-import { useEffect, useState } from 'react';
-import { Download, FileCheck2, FileText, Printer, RotateCcw } from 'lucide-react';
-import { createCreditNote, downloadSaft, getInvoice, listInvoices, type InvoiceDetail, type InvoiceDocument } from '../../api/psMobile';
+import { useEffect, useMemo, useState } from 'react';
+import { Download, FileText, Minus, Plus, RotateCcw, ShoppingCart } from 'lucide-react';
+import {
+  createSale,
+  createCreditNote,
+  downloadSaft,
+  getFiscalSettings,
+  getInvoice,
+  getSaleInvoice,
+  listCustomers,
+  listInvoices,
+  listProducts,
+  type Customer,
+  type FiscalSettings,
+  type InvoiceDetail,
+  type InvoiceDocument,
+  type Product,
+} from '../../api/psMobile';
 import { Feedback, formatDate, formatMoney, PageHeading } from '../../components/feedback/Feedback';
+import { InvoiceSheet } from './InvoiceSheet';
 
 const typeLabels: Record<string, string> = {
   invoice: 'Factura',
@@ -10,17 +26,52 @@ const typeLabels: Record<string, string> = {
   debit_note: 'Nota de débito',
 };
 
+const paymentOptions = [
+  { value: 'cash', label: 'Numerário' },
+  { value: 'multicaixa_express', label: 'Multicaixa Express' },
+  { value: 'card', label: 'Cartão' },
+  { value: 'bank_transfer', label: 'Transferência bancária' },
+  { value: 'other', label: 'Outro' },
+];
+
 export function InvoicesPage({ workspaceId }: { workspaceId: string }) {
   const [documents, setDocuments] = useState<InvoiceDocument[]>([]);
   const [selected, setSelected] = useState<InvoiceDetail | null>(null);
+  const [issuer, setIssuer] = useState<FiscalSettings | null>(null);
   const [creditTarget, setCreditTarget] = useState<InvoiceDocument | null>(null);
   const [creditReason, setCreditReason] = useState('');
+  const [creating, setCreating] = useState(false);
+  const [formLoading, setFormLoading] = useState(false);
+  const [products, setProducts] = useState<Product[]>([]);
+  const [customers, setCustomers] = useState<Customer[]>([]);
+  const [productSearch, setProductSearch] = useState('');
+  const [quantities, setQuantities] = useState<Record<string, number>>({});
+  const [customerId, setCustomerId] = useState('');
+  const [paymentMethod, setPaymentMethod] = useState('');
+  const [saleRequestKey, setSaleRequestKey] = useState('');
   const [periodFrom, setPeriodFrom] = useState(() => new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().slice(0, 10));
   const [periodTo, setPeriodTo] = useState(() => new Date().toISOString().slice(0, 10));
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
+
+  const selectedProducts = useMemo(
+    () => products.filter((product) => (quantities[product.id] || 0) > 0),
+    [products, quantities],
+  );
+  const visibleProducts = useMemo(() => {
+    const query = productSearch.trim().toLocaleLowerCase();
+    return products.filter((product) => !query || product.name.toLocaleLowerCase().includes(query)
+      || (product.code || '').toLocaleLowerCase().includes(query));
+  }, [productSearch, products]);
+  const invoiceTotal = selectedProducts.reduce(
+    (total, product) => total + product.price_cents * quantities[product.id],
+    0,
+  );
+  const canCreateInvoice = selectedProducts.length > 0
+    && Boolean(paymentMethod)
+    && selectedProducts.every((product) => !product.track_stock || quantities[product.id] <= product.stock_quantity);
 
   const load = async () => {
     setError('');
@@ -36,6 +87,73 @@ export function InvoicesPage({ workspaceId }: { workspaceId: string }) {
   };
 
   useEffect(() => { void load(); }, [workspaceId]);
+
+  useEffect(() => {
+    let active = true;
+    getFiscalSettings(workspaceId)
+      .then((settings) => { if (active) setIssuer(settings); })
+      .catch(() => { /* a folha imprime sem os dados do emitente */ });
+    return () => { active = false; };
+  }, [workspaceId]);
+
+  const openCreateForm = async () => {
+    setError('');
+    setNotice('');
+    setFormLoading(true);
+    try {
+      const [productPage, customerPage] = await Promise.all([
+        listProducts(workspaceId),
+        listCustomers(workspaceId),
+      ]);
+      setProducts(productPage.items.filter((product) => product.is_active));
+      setCustomers(customerPage.items.filter((customer) => customer.is_active));
+      setQuantities({});
+      setCustomerId('');
+      setPaymentMethod('');
+      setProductSearch('');
+      setSaleRequestKey(crypto.randomUUID());
+      setCreating(true);
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : 'Não foi possível preparar a emissão da fatura.');
+    } finally {
+      setFormLoading(false);
+    }
+  };
+
+  const createInvoice = async () => {
+    if (!canCreateInvoice || busy) return;
+    setBusy(true);
+    setError('');
+    setNotice('');
+    try {
+      const sale = await createSale(
+        workspaceId,
+        {
+          items: selectedProducts.map((product) => ({
+            product_id: product.id,
+            quantity: quantities[product.id],
+          })),
+          payment_method: paymentMethod,
+          ...(customerId ? { customer_id: customerId } : {}),
+        },
+        saleRequestKey,
+      );
+      setCreating(false);
+      setQuantities({});
+      setSaleRequestKey('');
+      setNotice(`Venda #${sale.number} concluída e fatura emitida.`);
+      await load();
+      try {
+        setSelected(await getSaleInvoice(workspaceId, sale.id));
+      } catch {
+        setError(`Venda #${sale.number} concluída, mas não foi possível abrir a fatura. Consulte os documentos fiscais.`);
+      }
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : 'Não foi possível emitir a fatura.');
+    } finally {
+      setBusy(false);
+    }
+  };
 
   const openDetail = async (document: InvoiceDocument) => {
     setError('');
@@ -95,9 +213,67 @@ export function InvoicesPage({ workspaceId }: { workspaceId: string }) {
 
   return (
     <div className="page-stack">
-      <PageHeading eyebrow="FISCALIDADE" title="Documentos fiscais" description="Consulte os documentos emitidos automaticamente nas vendas e exporte o ficheiro SAF-T." />
+      <PageHeading
+        eyebrow="FISCALIDADE"
+        title="Faturas"
+        description="Emita uma fatura paga de forma simples ou consulte os documentos fiscais."
+        action={<button className="button button--primary" disabled={busy || formLoading} onClick={() => void openCreateForm()} type="button">{formLoading ? 'A preparar…' : '＋ Nova fatura'}</button>}
+      />
       {error && <Feedback message={error} />}
       {notice && <Feedback kind="success" message={notice} />}
+
+      {creating && (
+        <div className="modal-backdrop" role="presentation">
+          <section aria-labelledby="invoice-create-title" aria-modal="true" className="dialog-card invoice-create-dialog" role="dialog">
+            <div className="invoice-create-dialog__heading">
+              <div><h2 id="invoice-create-title">Nova fatura</h2><p>Escolha os artigos e confirme o pagamento para emitir o documento.</p></div>
+              <button aria-label="Fechar" className="icon-button" disabled={busy} onClick={() => setCreating(false)} type="button">×</button>
+            </div>
+            <label className="form-field">
+              <span>Cliente <small>(opcional)</small></span>
+              <select onChange={(event) => setCustomerId(event.target.value)} value={customerId}>
+                <option value="">Consumidor Final</option>
+                {customers.map((customer) => <option key={customer.id} value={customer.id}>{customer.name}{customer.tax_id ? ` · NIF ${customer.tax_id}` : ''}</option>)}
+              </select>
+            </label>
+            <label className="form-field">
+              <span>Pesquisar artigos</span>
+              <input onChange={(event) => setProductSearch(event.target.value)} placeholder="Nome ou código do artigo" value={productSearch} />
+            </label>
+            <div className="invoice-create-products" aria-label="Artigos">
+              {visibleProducts.map((product) => {
+                const quantity = quantities[product.id] || 0;
+                const unavailable = product.track_stock && product.stock_quantity < 1;
+                return (
+                  <div className="invoice-create-product" key={product.id}>
+                    <span className="invoice-create-product__icon"><ShoppingCart size={16} /></span>
+                    <span className="invoice-create-product__copy"><strong>{product.name}</strong><small>{formatMoney(product.price_cents)}{product.track_stock ? ` · ${product.stock_quantity} em stock` : ''}</small></span>
+                    <div className="quantity-stepper">
+                      <button aria-label={`Diminuir ${product.name}`} disabled={quantity < 1 || busy} onClick={() => setQuantities((current) => ({ ...current, [product.id]: quantity - 1 }))} type="button"><Minus size={14} /></button>
+                      <span>{quantity}</span>
+                      <button aria-label={`Aumentar ${product.name}`} disabled={unavailable || busy || (product.track_stock && quantity >= product.stock_quantity)} onClick={() => setQuantities((current) => ({ ...current, [product.id]: quantity + 1 }))} type="button"><Plus size={14} /></button>
+                    </div>
+                  </div>
+                );
+              })}
+              {!visibleProducts.length && <p className="invoice-create-empty">{products.length ? 'Não foram encontrados artigos.' : 'Adicione artigos ao catálogo antes de emitir uma fatura.'}</p>}
+            </div>
+            <label className="form-field">
+              <span>Meio de pagamento</span>
+              <select onChange={(event) => setPaymentMethod(event.target.value)} required value={paymentMethod}>
+                <option value="">Selecione o pagamento</option>
+                {paymentOptions.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
+              </select>
+            </label>
+            <div className="invoice-create-total"><span>Total a pagar (com impostos)</span><strong>{formatMoney(invoiceTotal)}</strong></div>
+            <p className="form-hint">A emissão regista a venda paga e atualiza o stock dos artigos controlados.</p>
+            <div className="form-actions">
+              <button className="button button--subtle" disabled={busy} onClick={() => setCreating(false)} type="button">Cancelar</button>
+              <button className="button button--primary" disabled={!canCreateInvoice || busy} onClick={() => void createInvoice()} type="button">{busy ? 'A emitir…' : 'Emitir fatura'}</button>
+            </div>
+          </section>
+        </div>
+      )}
 
       <section className="surface-card export-card">
         <div className="export-card__intro">
@@ -112,47 +288,14 @@ export function InvoicesPage({ workspaceId }: { workspaceId: string }) {
       </section>
 
       {selected && (
-        <section className="surface-card invoice-detail" id="printable-document">
-          <div className="section-heading no-print">
-            <div><h2>Documento {selected.display_number}</h2><p>Emitido em {formatDate(selected.issued_at)}</p></div>
-            <div className="inline-actions">
-              {selected.doc_type === 'invoice' && <button className="button button--subtle" onClick={() => { setCreditTarget(selected); setCreditReason(''); }} type="button"><RotateCcw size={15} /> Nota de crédito</button>}
-              <button className="button button--subtle" onClick={() => window.print()} type="button"><Printer size={15} /> Imprimir</button>
-              <button className="icon-button" aria-label="Fechar documento" onClick={() => setSelected(null)} type="button">×</button>
-            </div>
-          </div>
-          <div className="invoice-paper">
-            <div className="invoice-paper__header">
-              <div><span className="eyebrow">PS-MOBILE · DOCUMENTO FISCAL</span><h2>{typeLabels[selected.doc_type] || selected.doc_type}</h2></div>
-              <div className="invoice-number"><small>N.º do documento</small><strong>{selected.display_number}</strong></div>
-            </div>
-            <div className="invoice-meta">
-              <div><small>Cliente</small><strong>{selected.customer_name}</strong><span>{selected.customer_tax_id || 'Consumidor final'}</span></div>
-              <div><small>Data de emissão</small><strong>{formatDate(selected.issued_at)}</strong></div>
-              <div><small>Estado</small><strong>{selected.status}</strong></div>
-            </div>
-            <div className="table-scroll">
-              <table className="data-table">
-                <thead><tr><th>Descrição</th><th>Qtd.</th><th>Preço unitário</th><th>IVA</th><th>Total</th></tr></thead>
-                <tbody>{selected.lines.map((line) => (
-                  <tr key={`${line.line_number}-${line.product_code}`}>
-                    <td><span className="table-primary">{line.description}</span><small className="table-secondary">{line.product_code}</small></td>
-                    <td>{line.quantity}</td>
-                    <td>{formatMoney(line.unit_price_cents, selected.currency)}</td>
-                    <td>{line.tax_percentage_bps / 100}%</td>
-                    <td><strong>{formatMoney(line.line_total_cents, selected.currency)}</strong></td>
-                  </tr>
-                ))}</tbody>
-              </table>
-            </div>
-            <div className="invoice-totals">
-              <div><span>Subtotal</span><strong>{formatMoney(selected.subtotal_cents, selected.currency)}</strong></div>
-              <div><span>Impostos</span><strong>{formatMoney(selected.tax_cents, selected.currency)}</strong></div>
-              <div className="invoice-totals__grand"><span>Total</span><strong>{formatMoney(selected.total_cents, selected.currency)}</strong></div>
-            </div>
-            <div className="invoice-integrity"><FileCheck2 size={16} /><span>Documento assinado digitalmente</span><code>{selected.hash}</code></div>
-          </div>
-        </section>
+        <InvoiceSheet
+          invoice={selected}
+          issuer={issuer}
+          onClose={() => setSelected(null)}
+          actions={selected.doc_type === 'invoice' ? (
+            <button className="button button--subtle button--small" onClick={() => { setCreditTarget(selected); setCreditReason(''); }} type="button"><RotateCcw size={15} /> Nota de crédito</button>
+          ) : null}
+        />
       )}
 
       <section className="surface-card">

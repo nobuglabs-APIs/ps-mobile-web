@@ -4,6 +4,10 @@ The PS Faturas web application uses the PS-Mobile API (`/api/v1`) for authentica
 account verification, two-factor authentication, workspace selection, products, sales,
 and fiscal documents.
 
+The Faturas page supports issuing a paid sale with an automatically generated fiscal
+invoice. Select products, an optional customer, and the payment method; stock is updated
+through the existing sales flow.
+
 ## Local development
 
 1. Copy `.env.example` to `.env.local`; it points to the test API at `http://102.37.1.46:8081/api/v1`.

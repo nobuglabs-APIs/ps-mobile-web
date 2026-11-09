@@ -14,6 +14,17 @@ export type Page<T> = {
   total: number;
 };
 
+export type AppNotification = {
+  id: string;
+  workspace_id: string | null;
+  kind: string;
+  title: string;
+  body: string;
+  data: unknown;
+  read_at: string | null;
+  created_at: string;
+};
+
 export type Membership = {
   workspace_id: string;
   workspace_name: string;
@@ -272,117 +283,19 @@ export type BillingOverview = {
   charges: Charge[];
 };
 
+export type BillingPayment = {
+  id: string;
+  status: string;
+  external_url: string | null;
+  metadata: unknown;
+};
+
 export type NotificationPreferences = {
   notify_email: boolean;
   notify_sms: boolean;
   notify_whatsapp: boolean;
   notify_push: boolean;
 };
-
-export type AdminOverview = {
-  users: number;
-  active_users: number;
-  workspaces: number;
-  active_workspaces: number;
-  active_subscriptions: number;
-  revenue_cents: number;
-  outstanding_cents: number;
-  sales_30d: number;
-};
-
-export type AdminUser = {
-  id: string;
-  email: string | null;
-  phone: string | null;
-  full_name: string;
-  is_admin: boolean;
-  is_active: boolean;
-  created_at: string;
-  workspace_count: number;
-};
-
-export type AdminWorkspace = {
-  id: string;
-  name: string;
-  owner_id: string;
-  owner_email: string | null;
-  is_active: boolean;
-  trial_ends_at: string;
-  created_at: string;
-  member_count: number;
-  plan_code: string | null;
-  subscription_status: string | null;
-  current_period_end: string | null;
-};
-
-export type AdminPlan = Plan & {
-  created_at: string;
-  updated_at: string;
-};
-
-export type AdminPayment = {
-  id: string;
-  workspace_id: string;
-  charge_id: string | null;
-  provider: string;
-  payer_phone: string | null;
-  provider_ref: string | null;
-  amount_cents: number;
-  currency: string;
-  status: string;
-  external_url: string | null;
-  metadata: unknown;
-  created_by: string | null;
-  created_at: string;
-  updated_at: string;
-  paid_at: string | null;
-};
-
-export function getAdminOverview() {
-  return request<AdminOverview>('/admin/overview');
-}
-
-export function listAdminUsers(q = '') {
-  const search = new URLSearchParams({ per_page: '100' });
-  if (q.trim()) search.set('q', q.trim());
-  return request<Page<AdminUser>>(`/admin/users?${search}`);
-}
-
-export function updateAdminUser(id: string, input: Partial<Pick<AdminUser, 'is_active' | 'is_admin'>>) {
-  return request<AdminUser>(`/admin/users/${id}`, { method: 'PATCH', body: input });
-}
-
-export function listAdminWorkspaces(q = '') {
-  const search = new URLSearchParams({ per_page: '100' });
-  if (q.trim()) search.set('q', q.trim());
-  return request<Page<AdminWorkspace>>(`/admin/workspaces?${search}`);
-}
-
-export function updateAdminWorkspace(
-  id: string,
-  input: { is_active?: boolean; trial_days?: number; plan_code?: string; period_days?: number },
-) {
-  return request<AdminWorkspace>(`/admin/workspaces/${id}`, { method: 'PATCH', body: input });
-}
-
-export function listAdminPlans() {
-  return request<AdminPlan[]>('/admin/plans');
-}
-
-export function updateAdminPlan(
-  code: string,
-  input: Partial<Pick<AdminPlan, 'name' | 'description' | 'price_cents' | 'usage_percent_bps' | 'is_active' | 'sort_order'>>,
-) {
-  return request<AdminPlan>(`/admin/plans/${encodeURIComponent(code)}`, { method: 'PATCH', body: input });
-}
-
-export function listAdminPayments() {
-  return request<Page<AdminPayment>>('/admin/payments?per_page=100');
-}
-
-export function listAdminCharges() {
-  return request<Page<Charge>>('/admin/charges?per_page=100');
-}
 
 type Registration = {
   user_id: string;
@@ -396,6 +309,29 @@ export function login(email: string, password: string) {
     method: 'POST',
     authenticated: false,
     body: { email, password },
+  });
+}
+
+export type SocialLoginResponse = {
+  user_id: string;
+  workspace_id: string;
+  is_new_user: boolean;
+  tokens: TokenResponse;
+};
+
+export function loginWithGoogle(id_token: string) {
+  return request<SocialLoginResponse | LoginChallenge>('/auth/google', {
+    method: 'POST',
+    authenticated: false,
+    body: { id_token },
+  });
+}
+
+export function loginWithFacebook(access_token: string) {
+  return request<SocialLoginResponse | LoginChallenge>('/auth/facebook', {
+    method: 'POST',
+    authenticated: false,
+    body: { access_token },
   });
 }
 
@@ -580,10 +516,12 @@ export function createSale(
     payment_method: string;
     customer_id?: string;
   },
+  idempotencyKey?: string,
 ) {
   return request<SaleDetail>(`/workspaces/${workspaceId}/sales`, {
     method: 'POST',
     body: input,
+    headers: idempotencyKey ? { 'Idempotency-Key': idempotencyKey } : undefined,
   });
 }
 
@@ -617,7 +555,7 @@ export type CashMovement = {
 };
 
 export function getCurrentCash(workspaceId: string) {
-  return request<CashSummary>(`/workspaces/${workspaceId}/cash/sessions/current`);
+  return request<CashSummary | null>(`/workspaces/${workspaceId}/cash/sessions/current`);
 }
 
 export function openCash(workspaceId: string, opening_float_cents: number) {
@@ -700,6 +638,10 @@ export function getInvoice(workspaceId: string, id: string) {
   return request<InvoiceDetail>(`/workspaces/${workspaceId}/invoices/${id}`);
 }
 
+export function getSaleInvoice(workspaceId: string, saleId: string) {
+  return request<InvoiceDetail>(`/workspaces/${workspaceId}/sales/${saleId}/invoice`);
+}
+
 export function createCreditNote(workspaceId: string, id: string, reason: string) {
   return request<InvoiceDetail>(
     `/workspaces/${workspaceId}/invoices/${id}/credit-note`,
@@ -740,7 +682,7 @@ export function getBillingOverview(workspaceId: string) {
 export function startCheckout(workspaceId: string, plan_code: string, provider: string, payer_phone?: string) {
   return request<{
     charge: Charge | null;
-    payment: { external_url: string | null; status: string } | null;
+    payment: BillingPayment | null;
     subscription: Subscription | null;
   }>(`/workspaces/${workspaceId}/billing/checkout`, {
     method: 'POST',
@@ -749,10 +691,14 @@ export function startCheckout(workspaceId: string, plan_code: string, provider: 
 }
 
 export function payCharge(workspaceId: string, chargeId: string, provider: string, payer_phone?: string) {
-  return request<{ external_url: string | null; status: string }>(
+  return request<BillingPayment>(
     `/workspaces/${workspaceId}/billing/charges/${chargeId}/pay`,
     { method: 'POST', body: { provider, payer_phone } },
   );
+}
+
+export function simulatePayment(workspaceId: string, paymentId: string) {
+  return request<BillingPayment>(`/workspaces/${workspaceId}/billing/payments/${paymentId}/simulate`, { method: 'POST' });
 }
 
 export function cancelSubscription(workspaceId: string) {
@@ -761,6 +707,20 @@ export function cancelSubscription(workspaceId: string) {
 
 export function getNotificationPreferences() {
   return request<NotificationPreferences>('/notifications/preferences');
+}
+
+export function getNotifications(page = 1, per_page = 30, unread_only = false) {
+  const params = new URLSearchParams({ page: String(page), per_page: String(per_page) });
+  if (unread_only) params.set('unread_only', 'true');
+  return request<Page<AppNotification>>(`/notifications?${params}`);
+}
+
+export function markNotificationRead(id: string) {
+  return request<void>(`/notifications/${encodeURIComponent(id)}/read`, { method: 'POST' });
+}
+
+export function markAllNotificationsRead() {
+  return request<void>('/notifications/read-all', { method: 'POST' });
 }
 
 export function updateNotificationPreferences(input: Partial<NotificationPreferences>) {
