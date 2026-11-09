@@ -3,7 +3,15 @@
   "outputDirectory": "dist",
   "rewrites": [
     {
-      "source": "/((?!api/).*)",
+      "source": "/api/v1/:path*",
+      "destination": "http://102.37.1.46:8081/api/v1/:path*"
+    },
+    {
+      "source": "/media/:path*",
+      "destination": "http://102.37.1.46:8081/media/:path*"
+    },
+    {
+      "source": "/((?!api/|media/).*)",
       "destination": "/index.html"
     }
   ]
